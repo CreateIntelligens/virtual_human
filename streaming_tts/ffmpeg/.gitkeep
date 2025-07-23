@@ -1,0 +1,9 @@
+# This file keeps the ffmpeg directory in git
+# Users need to install FFmpeg binaries in this directory
+# 
+# Installation instructions:
+# 1. Download FFmpeg from https://ffmpeg.org/download.html
+# 2. Extract the binaries to this directory
+# 3. Ensure ffmpeg executable is accessible
+#
+# See README.txt for detailed installation guide

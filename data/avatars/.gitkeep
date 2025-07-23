@@ -1,0 +1,3 @@
+# This file keeps the avatars directory in git
+# Place your trained avatar models here
+# Each avatar should be in its own subdirectory (e.g., avator_1/, avator_2/, etc.)

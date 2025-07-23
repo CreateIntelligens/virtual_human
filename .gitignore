@@ -1,0 +1,149 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyTorch
+*.pth
+*.pt
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Model files and weights
+models/
+!models/put models here.txt
+
+# Streaming TTS models and outputs
+streaming_tts/output/*
+!streaming_tts/output/.gitkeep
+streaming_tts/tools/asr/models/
+streaming_tts/tools/uvr5/uvr5_weights/
+
+# FFmpeg binaries (users need to install manually)
+streaming_tts/ffmpeg/*
+!streaming_tts/ffmpeg/.gitkeep
+!streaming_tts/ffmpeg/README.txt
+
+# GPT-SoVITS specific model files
+streaming_tts/GPT_SoVITS/pretrained_models/
+streaming_tts/GPT_SoVITS/resemble_enhance/model_repo/
+streaming_tts/GPT_SoVITS/text/G2PWModel/g2pW.onnx
+streaming_tts/GPT_SoVITS/text/G2PWModel/__pycache__/
+streaming_tts/GPT_SoVITS/text/G2PWModel_1.1.zip
+streaming_tts/GPT_SoVITS/text/*.pickle
+
+# Data directories (exclude content but keep structure)
+data/avatars/*
+!data/avatars/.gitkeep
+data/customvideo/*
+!data/customvideo/.gitkeep
+data/video/*
+!data/video/.gitkeep
+data/audio/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.backup
+
+# Development rules (should not be in public repo)
+.clinerules/
+streaming_tts/.env.device
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+
+# Git
+.git/
+.gitattributes
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Audio/Video files
+*.wav
+*.mp4
+*.avi
+*.mov
+*.mp3
+*.flac
+*.ogg
+
+# Environment files for specific devices
+*.env.local.device
+*.env.device
+*.env
+
+# Image files (except sample images)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+!web/*.png
+!web/*.jpg
+!web/*.gif
+
+# Pickle files
+*.pkl
+*.pickle
+
+# ONNX models
+*.onnx
+
+# Checkpoints
+checkpoints/
+ckpts/
