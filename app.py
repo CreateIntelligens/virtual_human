@@ -364,6 +364,29 @@ async def human(request):
         ),
     )
 
+async def interrupt_talk(request):
+    try:
+        params = await request.json()
+
+        sessionid = params.get('sessionid',0)
+        logger.info(f'[{datetime.now()}] Received interrupt request for session {sessionid}', sessionid)
+        nerfreals[sessionid].flush_talk()
+        
+        return web.Response(
+            content_type="application/json",
+            text=json.dumps(
+                {"code": 0, "msg":"ok"}
+            ),
+        )
+    except Exception as e:
+        logger.exception('exception:')
+        return web.Response(
+            content_type="application/json",
+            text=json.dumps(
+                {"code": -1, "msg": str(e)}
+            ),
+        )
+
 async def humanaudio(request):
     try:
         form = await request.post()
@@ -981,6 +1004,7 @@ if __name__ == '__main__':
     # 設置路由
     appasync.router.add_post("/offer", offer)
     appasync.router.add_post("/human", human)
+    appasync.router.add_post("/interrupt_talk", interrupt_talk)
     appasync.router.add_post("/humanaudio", humanaudio)
     appasync.router.add_post("/set_audiotype", set_audiotype)
     appasync.router.add_post("/record", record)
