@@ -91,3 +91,7 @@ assets/
 # ffmpeg 文档目录 - 保留文件夹但忽略内容
 streaming_tts/ffmpeg/doc/*
 !streaming_tts/ffmpeg/doc/.gitkeep
+
+# G2PWModel 目录 - 保留文件夹但忽略内容
+streaming_tts/GPT_SoVITS/text/G2PWModel/*
+!streaming_tts/GPT_SoVITS/text/G2PWModel/.gitkeep
