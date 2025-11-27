@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC Stream with Audio Recorder</title>
+    <style>
+    select {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+    }
+
+    select:hover {
+        border-color: #007bff;
+    }
+
+    select:disabled {
+        background-color: #f0f0f0;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+    
+    .media-container {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 60px;
+    }
+    
+    .chat-container {
+        position: absolute;
+        bottom: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 600px;
+        z-index: 10;
+        text-align: center;
+    }
+    
+    .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        position: relative;
+        z-index: 20;
+    }
+    
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    
+    button:hover {
+        background-color: #0056b3;
+    }
+    
+    button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    
+    video {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px 0;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #f8d7da;
+        border-radius: 4px;
+        display: none;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .modal-buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    /* 修改對話歷史樣式 */
+    .chat-history {
+        margin-top: 0;
+        padding: 8px 16px;
+        background: transparent;
+        overflow-y: auto;
+        height: calc(4 * 70px);
+        display: flex;
+        flex-direction: column;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    .chat-message {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 4px 12px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.6);
+        font-size: 16px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 24px);
+        box-sizing: border-box;
+    }
+
+    .user-message {
+        color: #e3f2fd;
+    }
+
+    .ai-message {
+        color: #f0fff0;
+    }
+
+    /* 滾動條樣式 */
+    .chat-history::-webkit-scrollbar {
+        width: 8px;
+        position: absolute;
+        right: 0;
+    }
+
+    .chat-history::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.2);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.4);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.6);
+    }
+
+    @media (max-width: 768px) {
+        .chat-history::-webkit-scrollbar {
+            width: 4px;
+        }
+    }
+
+    /* Session indicator style */
+    .session-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    /* Input method notification style */
+    .input-method-notification {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(255, 193, 7, 0.9);
+        color: #000;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 1001;
+        display: none;
+    }
+
+    /* Debug info style */
+    .debug-info {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        max-width: 300px;
+        overflow: auto;
+        max-height: 150px;
+        display: none;
+    }
+    </style>
+</head>
+<body>
+    <div class="input-method-notification" id="inputMethodNotification">
+        請切換至英文輸入法以使用快捷鍵功能 (R: 開始錄音, T: 停止錄音, 空白鍵: 開始/停止錄音)
+    </div>
+    <div class="session-info" id="sessionInfo"></div>
+    <div class="debug-info" id="debugInfo"></div>
+    <div class="container">
+        <div class="media-container">
+            <div class="error-message" id="errorMessage"></div>
+            <div id="media">
+                <video id="rtc_media_player" autoplay muted playsinline controls></video>
+            </div>
+            <div class="controls">
+                <select id="avatarSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <select id="voiceSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <button id="recordButton">開始對話</button>
+                <button id="stopButton" disabled>停止對話</button>
+                <button id="debugButton" style="background-color: #6c757d; margin-left: 10px;">調試</button>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-history" id="chatHistory"></div>
+            <div class="transcription" id="transcriptionResult"></div>
+        </div>
+    </div>
+
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <h2>麥克風權限請求</h2>
+            <p>此應用程式需要使用您的麥克風進行錄音。您是否同意授予麥克風使用權？</p>
+            <div class="modal-buttons">
+                <button id="allowButton">允許</button>
+                <button id="denyButton">拒絕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="srs.sdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <script>
+    $(function(){
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioStream = null;
+        let dialogHistory = [];
+        let checkSpeakingInterval;
+        let currentDisplayName = '';
+        let debugMode = false;
+        let selectedMimeType = '';
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const isWindows = navigator.platform.toUpperCase().indexOf('WIN') >= 0;
+        
+        function logDebug(message, obj = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            console.log(logMessage, obj || '');
+            
+            if (debugMode) {
+                const debugInfo = document.getElementById('debugInfo');
+                debugInfo.innerHTML += `<div>${logMessage}${obj ? ': ' + JSON.stringify(obj) : ''}</div>`;
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+            }
+        }
+        
+        document.getElementById('debugButton').onclick = function() {
+            debugMode = !debugMode;
+            document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
+            this.textContent = debugMode ? '隱藏調試' : '調試';
+            
+            if (debugMode) {
+                document.getElementById('debugInfo').innerHTML = '';
+                logDebug('作業系統: ' + navigator.platform);
+                logDebug('瀏覽器: ' + navigator.userAgent);
+                logDebug('會話 ID: ' + sessionId);
+            }
+        };
+        
+        function startCheckingSpeakingStatus() {
+            checkSpeakingInterval = setInterval(async () => {
+                const response = await fetch('/is_speaking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId)
+                    })
+                });
+                const result = await response.json();
+                
+                const avatarSelect = document.getElementById('avatarSelect');
+                const voiceSelect = document.getElementById('voiceSelect');
+                avatarSelect.disabled = result.data;
+                voiceSelect.disabled = result.data;
+            }, 500);
+        }
+        
+        function switchToEnglishInput() {
+            if (isMac) {
+                const notification = document.getElementById('inputMethodNotification');
+                notification.style.display = 'block';
+                
+                try {
+                    const script = `
+                        tell application "System Events"
+                            key code 50 using {control down, command down}
+                        end tell
+                    `;
+                    logDebug('嘗試切換輸入法到英文');
+                } catch (error) {
+                    logDebug('切換輸入法失敗:', error);
+                }
+            }
+        }
+
+        if (isMac) {
+            switchToEnglishInput();
+            document.addEventListener('compositionstart', () => {
+                document.getElementById('inputMethodNotification').style.display = 'block';
+            });
+            document.addEventListener('compositionend', () => {
+                setTimeout(() => {
+                    document.getElementById('inputMethodNotification').style.display = 'none';
+                }, 3000);
+            });
+        }
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('sessionId') || '0';
+        document.getElementById('sessionInfo').textContent = `Session ID: ${sessionId}`;
+        
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const permissionModal = document.getElementById('permissionModal');
+        const allowButton = document.getElementById('allowButton');
+        const denyButton = document.getElementById('denyButton');
+        const transcriptionResult = document.getElementById('transcriptionResult');
+        const chatHistory = document.getElementById('chatHistory');
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            logDebug('錯誤: ' + message);
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showPermissionModal() {
+            return new Promise((resolve, reject) => {
+                permissionModal.style.display = 'block';
+                
+                allowButton.onclick = async () => {
+                    permissionModal.style.display = 'none';
+                    resolve(true);
+                };
+                
+                denyButton.onclick = () => {
+                    permissionModal.style.display = 'none';
+                    resolve(false);
+                };
+            });
+        }
+
+        async function checkAndRequestPermission() {
+            try {
+                logDebug('檢查麥克風權限');
+                const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                logDebug('麥克風權限狀態:', permissionStatus.state);
+                
+                if (permissionStatus.state === 'granted') {
+                    return true;
+                } else if (permissionStatus.state === 'prompt') {
+                    const userAgreed = await showPermissionModal();
+                    if (!userAgreed) {
+                        showError('對話功能需要麥克風權限才能使用。');
+                        return false;
+                    }
+                    return true;
+                } else if (permissionStatus.state === 'denied') {
+                    showError('麥克風權限已被封鎖。請在瀏覽器設定中更改權限設定。');
+                    return false;
+                }
+            } catch (err) {
+                logDebug('檢查權限時出錯:', err);
+                const userAgreed = await showPermissionModal();
+                return userAgreed;
+            }
+        }
+
+        function getSupportedMimeType() {
+            // 針對 Windows 做特殊處理
+            if (isWindows) {
+                // 在 Windows 上優先嘗試這些格式
+                const windowsPreferredTypes = [
+                    'audio/webm',
+                    'audio/webm;codecs=opus',
+                    'audio/mp4;codecs=opus',
+                    'audio/mpeg',
+                    'audio/wav',
+                    'audio/ogg;codecs=opus',
+                    'audio/ogg'
+                ];
+                
+                for (const type of windowsPreferredTypes) {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        logDebug('Windows 支持的 MIME 類型:', type);
+                        return type;
+                    }
+                }
+            }
+            
+            // 一般嘗試
+            const types = [
+                'audio/webm',
+                'audio/webm;codecs=opus',
+                'audio/mp4',
+                'audio/mpeg',
+                'audio/wav',
+                'audio/ogg;codecs=opus',
+                'audio/ogg',
+                ''  // 空字串表示使用瀏覽器默認
+            ];
+            
+            for (const type of types) {
+                if (type === '' || MediaRecorder.isTypeSupported(type)) {
+                    logDebug('選擇的 MIME 類型:', type || '默認');
+                    return type;
+                }
+            }
+            return '';
+        }
+
+        function getAudioFormat(mimeType) {
+            if (!mimeType) return 'wav';
+            if (mimeType.includes('webm')) return 'webm';
+            if (mimeType.includes('mp4')) return 'mp4';
+            if (mimeType.includes('mpeg')) return 'mp3';
+            if (mimeType.includes('ogg')) return 'ogg';
+            return 'wav';
+        }
+
+        async function requestMicrophoneAccess() {
+            try {
+                const hasPermission = await checkAndRequestPermission();
+                if (!hasPermission) {
+                    return;
+                }
+
+                logDebug('請求麥克風訪問權限');
+                
+                // 首先嘗試簡單的設置
+                try {
+                    audioStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: true,
+                        video: false
+                    });
+                    logDebug('成功獲取音頻流 (簡單設置)');
+                } catch (err) {
+                    logDebug('簡單設置失敗，嘗試詳細設置:', err);
+                    
+                    // 如果簡單設置失敗，嘗試詳細設置
+                    audioStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            channelCount: 1,
+                            sampleRate: 16000,
+                            sampleSize: 16,
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        },
+                        video: false
+                    });
+                    logDebug('成功獲取音頻流 (詳細設置)');
+                }
+                
+                // 顯示音頻軌道信息，方便調試
+                const audioTrack = audioStream.getAudioTracks()[0];
+                logDebug('音頻軌道信息:', audioTrack.getSettings());
+
+                // 獲取支持的 MIME 類型
+                selectedMimeType = getSupportedMimeType();
+                const options = {
+                    audioBitsPerSecond: 16000
+                };
+                
+                if (selectedMimeType) {
+                    options.mimeType = selectedMimeType;
+                }
+                
+                try {
+                    mediaRecorder = new MediaRecorder(audioStream, options);
+                    logDebug('MediaRecorder 創建成功:', 
+                             { mimeType: mediaRecorder.mimeType || '默認' });
+                } catch (err) {
+                    logDebug('創建 MediaRecorder 失敗，嘗試不設置 MIME 類型:', err);
+                    // 如果指定 MIME 類型失敗，嘗試使用默認設置
+                    mediaRecorder = new MediaRecorder(audioStream);
+                    logDebug('使用默認設置創建 MediaRecorder 成功');
+                }
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                        logDebug(`收到音頻數據: ${event.data.size} 字節`);
+                    } else {
+                        logDebug('收到空數據包');
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    logDebug('錄音已停止，處理音頻數據');
+                    
+                    if (audioChunks.length === 0) {
+                        logDebug('沒有收集到音頻數據');
+                        showError('沒有收集到音頻數據，請確認麥克風正常工作。');
+                        return;
+                    }
+                    
+                    // 根據實際錄製格式決定 blob 類型
+                    const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+                    const audioBlob = new Blob(audioChunks, { type: actualMimeType });
+                    
+                    logDebug('創建音頻 Blob:', { 
+                        size: audioBlob.size, 
+                        type: audioBlob.type,
+                        chunks: audioChunks.length
+                    });
+                    
+                    if (audioBlob.size > 0) {
+                        await transcribeAudio(audioBlob);
+                    } else {
+                        logDebug('音頻 Blob 大小為零');
+                        showError('錄製的音頻無效，請檢查麥克風設置。');
+                    }
+                    
+                    audioChunks = [];
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    logDebug('MediaRecorder 錯誤:', event.error);
+                    showError('錄音時發生錯誤: ' + event.error);
+                };
+
+                startRecording();
+                
+            } catch (err) {
+                logDebug('麥克風訪問錯誤:', err);
+                let errorMsg = '無法存取麥克風。';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMsg = '請允許麥克風存取權限。';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = '找不到麥克風裝置。';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '麥克風可能正被其他應用程式使用。';
+                } else if (err.name === 'AbortError') {
+                    errorMsg = '麥克風訪問被中止。';
+                } else if (err.name === 'SecurityError') {
+                    errorMsg = '由於安全限制，無法訪問麥克風。';
+                }
+                
+                showError(errorMsg);
+                recordButton.textContent = '開始對話';
+                recordButton.disabled = false;
+                stopButton.disabled = true;
+            }
+        }
+        
+        function startRecording() {
+            logDebug('開始錄音');
+            audioChunks = [];
+            
+            try {
+                // 設置定時數據回調，以確保收集數據
+                mediaRecorder.start(100);
+                logDebug('MediaRecorder 已啟動');
+                recordButton.textContent = '對話中...';
+                recordButton.disabled = true;
+                stopButton.disabled = false;
+                transcriptionResult.textContent = '';
+            } catch (err) {
+                logDebug('啟動錄音失敗:', err);
+                showError('啟動錄音失敗: ' + err.message);
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                logDebug('停止錄音');
+                try {
+                    mediaRecorder.stop();
+                    logDebug('MediaRecorder 已停止');
+                } catch (err) {
+                    logDebug('停止錄音時出錯:', err);
+                }
+                
+                recordButton.textContent = '開始對話';
+                recordButton.disabled = false;
+                stopButton.disabled = true;
+            } else {
+                logDebug('嘗試停止不活動的錄音器');
+            }
+            
+            if (audioStream) {
+                logDebug('釋放音頻流資源');
+                audioStream.getTracks().forEach(track => {
+                    track.stop();
+                    logDebug(`軌道 ${track.id} 已停止`);
+                });
+                audioStream = null;
+            }
+        }
+
+        async function humantalk(message) {
+            $('#rtc_media_player').prop('muted', false);
+            logDebug('發送訊息到服務器:', message);
+            fetch('/human', {
+                    body: JSON.stringify({
+                        text: message,
+                        type: 'echo',
+                        sessionid: parseInt(sessionId)
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    method: 'POST'
+            })
+            .then(response => logDebug('發送訊息響應:', response.status))
+            .catch(err => logDebug('發送訊息錯誤:', err));
+        }
+
+        async function transcribeAudio(audioBlob) {
+            try {
+                logDebug('開始轉錄音頻');
+                
+                const formData = new FormData();
+                
+                // 根據實際的 MIME 類型決定文件擴展名
+                const extension = getAudioFormat(audioBlob.type);
+                const filename = `audio.${extension}`;
+                
+                formData.append('audio', audioBlob, filename);
+                formData.append('sessionid', sessionId);
+                
+                logDebug('發送音頻數據:', {
+                    size: audioBlob.size,
+                    type: audioBlob.type,
+                    filename: filename
+                });
+
+                // 顯示發送的文件內容
+                if (debugMode) {
+                    const fileReader = new FileReader();
+                    fileReader.onload = function() {
+                        const arrayBuffer = this.result;
+                        logDebug(`音頻內容 (前 20 字節): ${new Uint8Array(arrayBuffer.slice(0, 20))}`);
+                    };
+                    fileReader.readAsArrayBuffer(audioBlob);
+                }
+
+                const response = await fetch('https://talk-demo.aitago.tw:9880/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logDebug('轉錄請求失敗:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorText
+                    });
+                    throw new Error(`轉錄請求失敗 (${response.status}): ${errorText}`);
+                }
+
+                const result = await response.json();
+                logDebug('轉錄結果:', result);
+                
+                if (result.text) {
+                    await humantalk(result.text);
+
+                    const dialogSet = {
+                        user: result.input_text,
+                        ai: result.text
+                    };
+                    dialogHistory.push(dialogSet);
+                    updateChatDisplay();
+                    transcriptionResult.textContent = '';
+                } else {
+                    logDebug('轉錄結果沒有文本');
+                    showError('未能識別語音，請再試一次');
+                }
+
+            } catch (error) {
+                logDebug('處理錯誤:', error);
+                showError('處理失敗: ' + error.message);
+                transcriptionResult.textContent = '處理失敗';
+            }
+        }
+
+        function updateChatDisplay() {
+            chatHistory.innerHTML = '';
+            const startIndex = Math.max(0, dialogHistory.length - 4);
+            for (let i = startIndex; i < dialogHistory.length; i++) {
+                const dialog = dialogHistory[i];
+                const dialogElement = document.createElement('div');
+                dialogElement.innerHTML = `
+                    <div class="chat-message user-message">${dialog.user}</div>
+                    <div class="chat-message ai-message">${dialog.ai}</div>
+                `;
+                chatHistory.appendChild(dialogElement);
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+        
+        recordButton.onclick = () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                requestMicrophoneAccess();
+            }
+        };
+        
+        stopButton.onclick = stopRecording;
+        
+        document.addEventListener('keydown', function(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            if (event.key.toLowerCase() === 'r') {
+                if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                    requestMicrophoneAccess();
+                }
+            }
+            
+            if (event.key.toLowerCase() === 't') {
+                stopRecording();
+            }
+
+            if (event.code === 'Space') {
+                event.preventDefault();
+                if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                    requestMicrophoneAccess();
+                } else {
+                    stopRecording();
+                }
+            }
+        });
+
+        chatHistory.addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+        }, false);
+
+        var sdk = null;
+        
+        function startPlay() {
+            $('#rtc_media_player').show();
+            
+            if (sdk) {
+                sdk.close();
+            }
+            sdk = new SrsRtcWhipWhepAsync();
+            
+            $('#rtc_media_player').prop('srcObject', sdk.stream);
+
+            var host = window.location.hostname;
+            var streamName = sessionId === '0' ? 'livestream' : `livestream${sessionId}`;
+            var url = `https://${host}:1986/rtc/v1/whep/?app=live&stream=${streamName}`;
+            
+            sdk.play(url).then(function(session) {
+                logDebug('WebRTC 串流連接成功');
+            }).catch(function(reason) {
+                sdk.close();
+                $('#rtc_media_player').hide();
+                logDebug('WebRTC 串流錯誤:', reason);
+                showError('串流連接失敗: ' + reason);
+            });
+        }
+        
+        window.onbeforeunload = function() {
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            if (sdk) {
+                sdk.close();
+            }
+            if (checkSpeakingInterval) {
+                clearInterval(checkSpeakingInterval);
+            }
+        };
+        
+        document.getElementById('voiceSelect').onchange = function() {
+            const configType = parseInt(this.value);
+            logDebug('切換 TTS 端點:', configType);
+            
+            fetch('/switch_tts_endpoint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionid: parseInt(sessionId),
+                    config_type: configType
+                })
+            })
+            .then(response => response.json())
+            .then(data => logDebug('切換 TTS 端點響應:', data))
+            .catch(error => logDebug('切換 TTS 端點錯誤:', error));
+        };
+
+        document.getElementById('avatarSelect').onchange = function() {
+            const avatar_id = this.value;
+            fetch('/switch_avatar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionid: parseInt(sessionId),
+                    avatar_id: avatar_id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    currentDisplayName = data.display_name;
+                }
+            })
+            .catch(error => {
+                console.error('Error switching avatar:', error);
+                showError('切換虛擬人失敗');
+            });
+        };
+
+        async function initializeUIWithConfig() {
+            try {
+                // 獲取當前配置
+                const configResponse = await fetch('/get_current_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId)
+                    })
+                });
+                const configData = await configResponse.json();
+                
+                if (configData.code === 0) {
+                    // 獲取所有可用的虛擬人列表
+                    const avatarsResponse = await fetch('/get_avatars');
+                    const avatarsData = await avatarsResponse.json();
+                    
+                    // 獲取所有可用的聲音列表
+                    const voicesResponse = await fetch('/get_voices');
+                    const voicesData = await voicesResponse.json();
+                    
+                    if (avatarsData.code === 0 && voicesData.code === 0) {
+                        const avatarSelect = document.getElementById('avatarSelect');
+                        const voiceSelect = document.getElementById('voiceSelect');
+                        
+                        // 清空並重新填充虛擬人選擇器
+                        avatarSelect.innerHTML = '';
+                        Object.values(avatarsData.data).forEach(avatar => {
+                            const option = document.createElement('option');
+                            option.value = avatar.id;
+                            option.textContent = avatar.display_name;
+                            avatarSelect.appendChild(option);
+                        });
+                        
+                        // 清空並重新填充聲音選擇器
+                        voiceSelect.innerHTML = '';
+                        Object.values(voicesData.data).forEach(voice => {
+                            const option = document.createElement('option');
+                            option.value = voice.id;
+                            option.textContent = voice.name;
+                            voiceSelect.appendChild(option);
+                        });
+                        
+                        // 設置當前選中的值
+                        avatarSelect.value = configData.data.current_avatar_id;
+                        voiceSelect.value = configData.data.current_voice_type.toString();
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing UI:', error);
+                showError('初始化設定失敗');
+            }
+        }
+
+        
+        $(document).ready(async function() {
+            $('#rtc_media_player').prop('muted', true);
+            startCheckingSpeakingStatus();
+            
+            // 等待初始化完成
+            await initializeUIWithConfig();
+            
+            startPlay();
+        });
+    });
+    </script>
+</body>
+</html>

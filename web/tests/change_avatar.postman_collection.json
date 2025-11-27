@@ -1,0 +1,77 @@
+{
+    "info": {
+        "name": "Change Avatar API Tests",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Change Avatar - Success",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"sessionid\": 0,\n    \"avatar_id\": \"avator_1\"\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8010/change_avatar",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8010",
+                    "path": ["change_avatar"]
+                }
+            }
+        },
+        {
+            "name": "Change Avatar - Invalid Session",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"sessionid\": 999999,\n    \"avatar_id\": \"avator_1\"\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8010/change_avatar",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8010",
+                    "path": ["change_avatar"]
+                }
+            }
+        },
+        {
+            "name": "Change Avatar - Invalid Avatar ID",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"sessionid\": 0,\n    \"avatar_id\": \"invalid_avatar\"\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8010/change_avatar",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8010",
+                    "path": ["change_avatar"]
+                }
+            }
+        }
+    ]
+}

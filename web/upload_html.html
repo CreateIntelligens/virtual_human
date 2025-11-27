@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML檔案上傳</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .error-message {
+            color: red;
+            margin-top: 5px;
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>HTML檔案上傳</h1>
+    <div class="form-group">
+        <label for="file">選擇HTML檔案:</label>
+        <input type="file" id="file" accept=".html">
+        <div id="fileError" class="error-message"></div>
+    </div>
+    <div class="form-group">
+        <label for="filename">儲存檔名:</label>
+        <input type="text" id="filename" placeholder="請輸入檔名">
+        <div id="filenameError" class="error-message"></div>
+    </div>
+    <button onclick="uploadFile()">上傳檔案</button>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('file');
+            const filenameInput = document.getElementById('filename');
+            const fileError = document.getElementById('fileError');
+            const filenameError = document.getElementById('filenameError');
+
+            // 重置錯誤訊息
+            fileError.style.display = 'none';
+            filenameError.style.display = 'none';
+
+            // 檢查是否選擇檔案
+            if (!fileInput.files.length) {
+                fileError.textContent = '請選擇一個HTML檔案';
+                fileError.style.display = 'block';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            // 檢查檔案類型
+            if (!file.name.toLowerCase().endsWith('.html')) {
+                fileError.textContent = '只能上傳HTML檔案';
+                fileError.style.display = 'block';
+                return;
+            }
+
+            // 檢查檔名輸入
+            const filename = filenameInput.value.trim();
+            if (!filename) {
+                filenameError.textContent = '請輸入檔名';
+                filenameError.style.display = 'block';
+                return;
+            }
+
+            // 檢查檔名是否包含斜線
+            if (filename.includes('/') || filename.includes('\\')) {
+                filenameError.textContent = '檔名不能包含斜線(/ 或 \\)';
+                filenameError.style.display = 'block';
+                return;
+            }
+
+            let canUpload = false;
+            
+            try {
+                // 檢查檔案是否已存在
+                const checkResponse = await fetch(`./${filename}.html`);
+                if (checkResponse.ok) {
+                    filenameError.textContent = '該檔名已存在，請使用其他檔名';
+                    filenameError.style.display = 'block';
+                    return;
+                }
+            } catch (error) {
+                // 如果是因為檔案不存在而失敗，則可以上傳
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    canUpload = true;
+                } else {
+                    alert('檔案檢查失敗：' + error.message);
+                    return;
+                }
+            }
+
+            if (canUpload) {
+                try {
+                    // 準備表單數據
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('filename', filename);
+
+                    // 發送 POST 請求到伺服器
+                    const response = await fetch('/upload_file', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        alert('檔案上傳成功！');
+                        fileInput.value = '';
+                        filenameInput.value = '';
+                    } else {
+                        alert('上傳失敗：' + result.error);
+                    }
+                } catch (uploadError) {
+                    alert('檔案上傳失敗：' + uploadError.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

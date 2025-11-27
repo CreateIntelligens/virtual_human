@@ -1,0 +1,97 @@
+__pycache__/
+build/
+*.egg-info/
+*.so
+*.mp4
+
+tmp*
+trial*/
+
+# data 文件夹配置 - 只保留特定文件夹和文件
+data/*
+!data/avatars/
+!data/customvideo/
+!data/video/
+!data/custom_config.json
+
+# avatars 文件夹内的模型文件会被下面的全局模型规则忽略
+data/avatars/**/*.pth
+data/avatars/**/*.pkl
+data/avatars/**/*.pt
+
+data_utils/face_tracking/3DMM/*
+data_utils/face_parsing/79999_iter.pth
+
+pretrained
+*.mp4
+.DS_Store
+workspace/log_ngp.txt
+.idea
+
+venv/
+
+# 环境变量和配置文件
+.env
+*.env
+
+# 密钥文件
+streaming_tts/gen-lang-client-*.json
+streaming_tts/wonderland-nft-*.json
+*-credentials.json
+*-key.json
+
+# 日志文件
+logs/
+*.log
+
+# 模型文件 (大文件)
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.h5
+*.pkl
+*.pt
+*.onnx
+*.rep
+*.pickle
+
+# 模型目录
+models/
+gfpgan/
+wav2lip/results/
+streaming_tts/output/
+streaming_tts/GPT_SoVITS/pretrained_models/
+streaming_tts/resemble_enhance/model_repo/
+streaming_tts/tools/asr/models/
+streaming_tts/tools/uvr5/uvr5_weights/
+streaming_tts/onnx/
+
+# 调试文件
+debug_audio/
+*.aac
+*.wav
+
+# 临时文件
+temp*
+*.png
+圖片比較.png
+
+# 大型视频和压缩文件
+*.mov
+*.gif
+*.zip
+*.exe
+
+# 其他不需要的目录
+.clinerules/
+.pyscn/
+assets/
+
+# ffmpeg 文档目录 - 保留文件夹但忽略内容
+streaming_tts/ffmpeg/doc/*
+!streaming_tts/ffmpeg/doc/.gitkeep
+
+# G2PWModel 目录 - 保留文件夹但忽略内容
+streaming_tts/GPT_SoVITS/text/G2PWModel/*
+!streaming_tts/GPT_SoVITS/text/G2PWModel/.gitkeep

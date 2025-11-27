@@ -1,0 +1,42 @@
+<body>
+    <div class="input-method-notification" id="inputMethodNotification">
+        請切換至英文輸入法以使用快捷鍵功能 (R: 開始錄音, T: 停止錄音, 空白鍵: 開始/停止錄音)
+    </div>
+    <div class="session-info" id="sessionInfo"></div>
+    <input type="hidden" id="sessionid" value="0">
+    <div class="container">
+        <div class="media-container">
+            <div class="error-message" id="errorMessage"></div>
+            <div id="media">
+                <video id="rtc_media_player" autoplay muted playsinline></video>
+                <canvas id="outputCanvas"></canvas>
+                <audio id="audio" autoplay></audio>
+            </div>
+            <div class="controls">
+                <select id="avatarSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <select id="voiceSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <button id="recordButton">開始對話</button>
+                <button id="stopButton" disabled>停止對話</button>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-history" id="chatHistory"></div>
+            <div class="transcription" id="transcriptionResult"></div>
+        </div>
+    </div>
+
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <h2>麥克風權限請求</h2>
+            <p>此應用程式需要使用您的麥克風進行錄音。您是否同意授予麥克風使用權？</p>
+            <div class="modal-buttons">
+                <button id="allowButton">允許</button>
+                <button id="denyButton">拒絕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</body>
+</html>

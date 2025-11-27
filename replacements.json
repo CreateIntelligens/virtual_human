@@ -1,0 +1,122 @@
+[
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*9001(?![A-Za-z0-9])",
+      "replacement": "iso 九零零一",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*22716(?![A-Za-z0-9])",
+      "replacement": "iso 二二七一六",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*14001(?![A-Za-z0-9])",
+      "replacement": "iso 一四零零一",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*13485(?![A-Za-z0-9])",
+      "replacement": "iso 一三四八五",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*45001(?![A-Za-z0-9])",
+      "replacement": "iso 四五零零一",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])FSSC\\s*22000(?![A-Za-z0-9])",
+      "replacement": "FSSC 二二零零零",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])ISO\\s*17025(?![A-Za-z0-9])",
+      "replacement": "iso 一七零二五",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9])OHSAS\\s*18001(?![A-Za-z0-9])",
+      "replacement": "OHSAS 一八零零一",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "FSC、Halal",
+      "replacement": "FSC,Halal",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "ISO、GMP",
+      "replacement": "ISO,GMP",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "、",
+      "replacement": ",",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])O\\W*D\\W*M(?![A-Za-z])",
+      "replacement": "歐低M",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])O\\W*E\\W*M(?![A-Za-z])",
+      "replacement": "歐依M",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])M\\W*O\\W*Q(?![A-Za-z])",
+      "replacement": "M歐Q",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])I\\W*S\\W*O(?![A-Za-z])",
+      "replacement": "iso",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])µ\\W*m(?![A-Za-z])",
+      "replacement": "謬M",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])B\\W*3(?![A-Za-z])",
+      "replacement": "B三",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])B\\W*12(?![A-Za-z])",
+      "replacement": "B十二",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])A\\W*I\\W*K\\W*K\\W*A(?![A-Za-z])",
+      "replacement": "愛卡",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])A\\W*I(?![A-Za-z])",
+      "replacement": "ai",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])L\\W*I\\W*N\\W*E(?![A-Za-z])",
+      "replacement": "line",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "(?<![A-Za-z])S\\W*C\\W*H\\W*O\\W*O\\W*L(?![A-Za-z])",
+      "replacement": "SCOOL",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "/",
+      "replacement": ",",
+      "flags": ["IGNORECASE"]
+    },
+    {
+      "pattern": "-",
+      "replacement": "to",
+      "flags": ["IGNORECASE"]
+    }
+  ]

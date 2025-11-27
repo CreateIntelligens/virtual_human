@@ -1,0 +1,83 @@
+{
+    "voice_0": {
+        "id": 0,
+        "name": "Hayley",
+        "tts_server": "http://52.69.235.212:9885/",
+        "voice name": "Hayley",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2025/06/02/e5581ced48017a0ebd3d004eaaa40725/ref_audios/20250602094244_1_237440_407360.wav",
+            "prompt_text": "站在舞台上发表iPhone的那个人不过她的人生其实比任何一场",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 1.0,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 4121245090,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    },
+    "voice_1": {
+        "id": 1,
+        "name": "小安",
+        "tts_server": "http://52.69.235.212:9885/test",
+        "voice name": "小安",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2025/06/03/68e1c0f0b50d7b14c91d2bece4c82f02/ref_audios/20250603010414_39_6588160_6755840.wav",
+            "prompt_text": "要求超高甚至很多人都说他是一个控制狂",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 1.0,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 2008100736,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    },
+    "voice_2": {
+        "id": 2,
+        "name": "voice_2",
+        "tts_server": "http://52.69.235.212:9885/maxgut",
+        "voice name": "cindy",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2025/05/12/fa08e17adea18c4292c0e4e6bea3b7f8/ref_audios/20250512071334_33_5771520_5927360.wav",
+            "prompt_text": "餐廳服務生的態度實在太差了讓人感覺被冒犯",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 1.0,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 1771600266,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    }
+}
