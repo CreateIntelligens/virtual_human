@@ -87,3 +87,7 @@ temp*
 .clinerules/
 .pyscn/
 assets/
+
+# ffmpeg 文档目录 - 保留文件夹但忽略内容
+streaming_tts/ffmpeg/doc/*
+!streaming_tts/ffmpeg/doc/.gitkeep
