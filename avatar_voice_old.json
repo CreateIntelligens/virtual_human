@@ -1,0 +1,80 @@
+{
+    "voice_0": {
+        "id": 0,
+        "name": "voice_0",
+        "voice name": "lula",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2025/02/19/c819eb70a3aa0d8b79bcb11beb3752bb/ref_audios/Lula_voice_45_7794560_7971840.wav",
+            "prompt_text": "到底在哪裡?帥哥在哪裡?我沒看到這個是真實的這是真實",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 0.9,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 1413775942,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    },
+    "voice_1": {
+        "id": 1,
+        "name": "voice_1",
+        "voice name": "sweet",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2024/09/18/4c22dbd4462eb8623bce49674dc0b684/ref_audios/sweet_11_2300160_2405120.wav",
+            "prompt_text": "不妨深入體會在地的文化熱情",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 1.0,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 717357706,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    },
+    "voice_2": {
+        "id": 2,
+        "name": "voice_2",
+        "voice name": "cindy",
+        "config": {
+            "text": "text",
+            "text_lang": "auto",
+            "ref_audio_path": "./output/2025/05/09/9d23b9c3acd57e48758aafe29ffdc7eb/ref_audios/20250509093716_12_2059520_2208000.wav",
+            "prompt_text": "不知道自己能否適應，這種未知感讓我夜不能寐",
+            "prompt_lang": "zh",
+            "top_k": 5,
+            "top_p": 1,
+            "temperature": 1,
+            "text_split_method": "cut1",
+            "batch_size": 20,
+            "batch_threshold": 0.75,
+            "speed_factor": 1.0,
+            "split_bucket": true,
+            "fragment_interval": 0.3,
+            "seed": 1771600266,
+            "media_type": "wav",
+            "streaming_mode": true,
+            "parallel_infer": true,
+            "repetition_penalty": 1.35
+        }
+    }
+}

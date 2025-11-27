@@ -1,0 +1,28 @@
+{ 
+    "voice_3":
+        { 
+            "id": 3, 
+            "name": "OpenAI Alloy", 
+            "type": "openai", 
+            "model": "tts-1", 
+            "voice": "alloy" 
+        }, 
+    
+    "voice_4": 
+        { 
+            "id": 4, 
+            "name": "OpenAI Nova", 
+            "type": "openai", 
+            "model": "tts-1", 
+            "voice": "nova" 
+        }, 
+    "voice_5": 
+        { 
+            "id": 5, 
+            "name": "OpenAI Echo", 
+            "type": "openai", 
+            "model": "tts-1", 
+            "voice": "echo" 
+        }
+
+}

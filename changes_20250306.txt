@@ -1,0 +1,116 @@
+# 2025-03-06 系統改進記錄
+
+## 1. 日誌系統改進
+### 問題描述
+- 日誌文件分散 (app.log 和 app_YYYYMMDD.log)
+- 需要自動日誌輪換和清理機制
+- 需要統一的日誌輸出方式
+
+### 修改內容
+1. 修改 logger.py：
+   - 添加自動日誌輪換功能
+   - 添加定時清理機制（保留7天）
+   - 實現優雅的日誌處理
+
+2. 實現功能：
+   - 使用 app.log 作為當前日誌
+   - 每天自動將前一天的日誌重命名為 app_YYYYMMDD.log
+   - 自動刪除7天前的舊日誌
+   - 每小時檢查一次是否需要輪換
+
+## 2. 容器重啟機制優化
+### 問題描述
+- 容器停止後不能自動重啟
+- 重啟策略配置衝突
+- 需要改進服務依賴關係
+
+### 修改內容
+1. docker-compose.yaml 優化：
+   - 移除複雜的 restart_policy 配置
+   - 使用 restart: always 確保服務自動重啟
+   - 改進服務依賴關係配置
+
+2. 優化 app.py：
+   - 添加信號處理（SIGTERM, SIGINT）
+   - 實現優雅退出機制
+   - 改進錯誤處理
+   - 添加 SRS 服務可用性檢查
+
+## 3. 實施步驟
+1. 修改 logger.py：
+```python
+class CustomLogger:
+    def __init__(self, name, log_dir='logs'):
+        self.log_dir = log_dir
+        self.current_log = 'app.log'
+        self.retention_days = 7
+        self.setup_logging()
+        self.start_rotation_check()
+```
+
+2. 修改 docker-compose.yaml：
+```yaml
+services:
+  srs:
+    restart: always
+  app:
+    restart: always
+    depends_on:
+      srs:
+        condition: service_started
+```
+
+3. 添加信號處理：
+```python
+def handle_sigterm(signum, frame):
+    logger.info("Received SIGTERM signal, initiating graceful shutdown...")
+    # 清理資源
+    for pc in pcs:
+        try:
+            asyncio.run(pc.close())
+        except:
+            pass
+```
+
+4. 添加服務可用性檢查：
+```python
+async def check_srs_availability(session):
+    try:
+        async with session.get("http://srs:1985/api/v1/versions") as resp:
+            return resp.status == 200
+    except:
+        return False
+```
+
+## 4. 測試結果
+1. 日誌系統：
+   - 成功實現日誌自動輪換
+   - 成功實現舊日誌清理
+   - 保持日誌輸出的連續性
+
+2. 容器重啟：
+   - 服務可以在非正常退出後自動重啟
+   - 維持正確的服務啟動順序
+   - 優雅處理退出信號
+
+## 5. 注意事項
+1. 系統配置：
+   - 確保 logs 目錄存在且有適當的權限
+   - 確保容器有足夠的日誌存儲空間
+   - 監控日誌輪換和清理是否正常執行
+
+2. 重啟機制：
+   - 使用 docker compose down/up 而不是 docker stop/start
+   - 注意觀察服務啟動順序
+   - 關注錯誤日誌以排查潛在問題
+
+## 6. 後續建議
+1. 監控改進：
+   - 添加日誌分析工具
+   - 實現日誌聚合功能
+   - 添加警告通知機制
+
+2. 性能優化：
+   - 監控日誌寫入性能
+   - 優化日誌輪換時機
+   - 考慮添加日誌壓縮功能

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>语音识别演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #output, #errorMsg {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            min-height: 100px;
+            background-color: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>语音识别演示</h1>
+    <p>点击"开始"按钮开始语音识别。请确保：</p>
+    <ul>
+        <li>已允许麦克风权限</li>
+        <li>使用Chrome浏览器</li>
+        <li>在HTTPS网站或本地环境中</li>
+    </ul>
+    
+    <div>
+        <button id="startButton" onclick="startRecognition()">开始</button>
+        <button id="stopButton" onclick="stopRecognition()" disabled>停止</button>
+    </div>
+
+    <div id="errorMsg"></div>
+    <div id="output">您的语音转文字将在这里显示。</div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const output = document.getElementById('output');
+        const errorMsg = document.getElementById('errorMsg');
+        let recognition = null;
+
+        function checkBrowserSupport() {
+            if (!('webkitSpeechRecognition' in window)) {
+                showError('当前浏览器不支持语音识别。推荐使用Chrome浏览器。');
+                return false;
+            }
+            return true;
+        }
+
+        function showError(message) {
+            errorMsg.innerHTML = `<p class="error">错误：${message}</p>`;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        function startRecognition() {
+            // 重置错误信息
+            errorMsg.innerHTML = '';
+            output.innerHTML = '正在准备...';
+
+            // 检查浏览器支持
+            if (!checkBrowserSupport()) return;
+
+            // 创建语音识别对象
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = 'zh-CN'; // 设置为中文
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                output.innerHTML = '正在监听... 请说话';
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                output.innerHTML = `
+                    <strong>最终结果:</strong> ${finalTranscript}<br>
+                    <em>实时结果:</em> ${interimTranscript}
+                `;
+            };
+
+            recognition.onerror = (event) => {
+                switch(event.error) {
+                    case 'no-speech':
+                        showError('未检测到语音，请检查麦克风。');
+                        break;
+                    case 'audio-capture':
+                        showError('音频捕获错误。请确保：\n1. 已授予麦克风权限\n2. 麦克风正常工作\n3. 在HTTPS环境中运行');
+                        break;
+                    case 'not-allowed':
+                        showError('未获得麦克风权限。请在浏览器设置中允许麦克风访问。');
+                        break;
+                    default:
+                        showError(`发生错误: ${event.error}`);
+                }
+            };
+
+            recognition.onend = () => {
+                output.innerHTML += '<br>语音识别已结束。';
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                showError(`启动失败: ${e.message}`);
+            }
+        }
+
+        function stopRecognition() {
+            if (recognition) {
+                recognition.stop();
+                output.innerHTML += '<br>已手动停止识别。';
+            }
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+    </script>
+</body>
+</html>

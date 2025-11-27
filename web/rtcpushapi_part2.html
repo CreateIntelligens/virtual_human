@@ -1,0 +1,603 @@
+<script>
+$(function(){
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId') || '0';
+    document.getElementById('sessionInfo').textContent = `Session ID: ${sessionId}`;
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioStream = null;
+    let dialogHistory = [];
+    let checkSpeakingInterval;
+    let currentDisplayName = '';
+    let canvas, ctx;
+    let isGreenScreenEnabled = false;
+    let animationFrameId = null;
+    let isProcessing = false;
+    let sdk = null;
+    let ws = null;
+
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    
+    const videoElement = document.getElementById('rtc_media_player');
+    const chatHistory = document.getElementById('chatHistory');
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const errorMessage = document.getElementById('errorMessage');
+    const permissionModal = document.getElementById('permissionModal');
+    const allowButton = document.getElementById('allowButton');
+    const denyButton = document.getElementById('denyButton');
+    const transcriptionResult = document.getElementById('transcriptionResult');
+    const toggleGreenScreen = document.getElementById('toggleGreenScreen');
+
+    function initWebSocket() {
+        const wsUrl = `wss://${window.location.hostname}:9880/ws/audio/${sessionId}`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' WebSocket connected');
+        };
+
+        ws.onclose = () => {
+            console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' WebSocket disconnected');
+            setTimeout(() => {
+                initWebSocket();
+            }, 3000);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            showError('WebSocket連接錯誤');
+        };
+
+        ws.onmessage = (event) => {
+            const result = JSON.parse(event.data);
+            if (result.input_text && result.text) {
+                const dialogSet = {
+                    user: result.input_text,
+                    ai: result.text
+                };
+                dialogHistory.push(dialogSet);
+                updateChatDisplay();
+                transcriptionResult.textContent = '';
+                humantalk(result.text);
+            }
+        };
+    }
+    
+    // Input method switching for Mac
+    function switchToEnglishInput() {
+        if (isMac) {
+            const notification = document.getElementById('inputMethodNotification');
+            notification.style.display = 'block';
+            
+            try {
+                const script = `
+                    tell application "System Events"
+                        key code 50 using {control down, command down}
+                    end tell
+                `;
+                console.log('Attempting to switch input method to English');
+            } catch (error) {
+                console.error('Failed to switch input method:', error);
+            }
+        }
+    }
+
+    function showError(message) {
+        if (errorMessage) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    function initializeGreenScreen(videoElement) {
+        canvas = document.getElementById('outputCanvas');
+        ctx = canvas.getContext('2d');
+        
+        const aspectRatio = videoElement.videoHeight / videoElement.videoWidth;
+        canvas.width = 600;
+        canvas.height = Math.round(600 * aspectRatio);
+
+        if (isGreenScreenEnabled) {
+            $('#outputCanvas').show();
+            $('#rtc_media_player').css('opacity', '0');
+            processFrame();
+        }
+        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Green screen initialized');
+    }
+
+    function processFrame() {
+        if (!isGreenScreenEnabled || isProcessing) {
+            return;
+        }
+
+        isProcessing = true;
+        
+        if (videoElement.paused || videoElement.ended) {
+            isProcessing = false;
+            return;
+        }
+
+        try {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const newWidth = videoElement.videoWidth;
+            const newHeight = videoElement.videoHeight;
+            
+            const x = (canvas.width - newWidth) / 2;
+            const y = (canvas.height - newHeight) / 2;
+            
+            ctx.drawImage(videoElement, 
+                0, 0, videoElement.videoWidth, videoElement.videoHeight,
+                x, 0, newWidth, newHeight
+            );
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                if (g > r * 1.5 && g > b * 1.5) {
+                    data[i + 3] = 0;
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        } catch (error) {
+            console.error('Error processing frame:', error);
+        }
+        
+        isProcessing = false;
+        
+        if (isGreenScreenEnabled) {
+            animationFrameId = requestAnimationFrame(processFrame);
+        }
+    }
+
+    toggleGreenScreen.onclick = function() {
+        isGreenScreenEnabled = !isGreenScreenEnabled;
+
+        if (isGreenScreenEnabled) {
+            $('#rtc_media_player').css('opacity', '0');
+            $('#outputCanvas').show();
+            toggleGreenScreen.style.backgroundColor = '#e74c3c';
+            if (!canvas) {
+                initializeGreenScreen(videoElement);
+            }
+            processFrame();
+        } else {
+            $('#outputCanvas').hide();
+            $('#rtc_media_player').css('opacity', '1');
+            toggleGreenScreen.style.backgroundColor = '#007bff';
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+    };
+
+    async function humantalk(message) {
+        $('#rtc_media_player').prop('muted', false);
+        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}`+ ' Sending to /human api : ' + message);
+        
+        try {
+            await fetch('/human', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: message,
+                    type: 'echo',
+                    sessionid: parseInt(sessionId)
+                })
+            });
+        } catch (error) {
+            console.error('Error sending message:', error);
+            showError('發送訊息失敗');
+        }
+    }
+
+    function startCheckingSpeakingStatus() {
+        checkSpeakingInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/is_speaking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId)
+                    })
+                });
+                const result = await response.json();
+                
+                const avatarSelect = document.getElementById('avatarSelect');
+                const voiceSelect = document.getElementById('voiceSelect');
+                avatarSelect.disabled = result.data;
+                voiceSelect.disabled = result.data;
+                
+                if (result.data) {
+                    recordButton.disabled = true;
+                    recordButton.style.opacity = "0.6";
+                } else {
+                    recordButton.disabled = false;
+                    recordButton.style.opacity = "1";
+                }
+            } catch (error) {
+                console.error('Error checking speaking status:', error);
+            }
+        }, 500);
+    }
+
+    function showPermissionModal() {
+        return new Promise((resolve, reject) => {
+            permissionModal.style.display = 'block';
+            
+            allowButton.onclick = async () => {
+                permissionModal.style.display = 'none';
+                resolve(true);
+            };
+            
+            denyButton.onclick = () => {
+                permissionModal.style.display = 'none';
+                resolve(false);
+            };
+        });
+    }
+
+    async function checkAndRequestPermission() {
+        try {
+            const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+            
+            if (permissionStatus.state === 'granted') {
+                return true;
+            } else if (permissionStatus.state === 'prompt') {
+                const userAgreed = await showPermissionModal();
+                if (!userAgreed) {
+                    showError('對話功能需要麥克風權限才能使用。');
+                    return false;
+                }
+                return true;
+            } else if (permissionStatus.state === 'denied') {
+                showError('麥克風權限已被封鎖。請在瀏覽器設定中更改權限設定。');
+                return false;
+            }
+        } catch (err) {
+            const userAgreed = await showPermissionModal();
+            return userAgreed;
+        }
+    }
+
+    function getSupportedMimeType() {
+        const types = [
+            'audio/webm;codecs=opus',
+            'audio/mp4',
+            'audio/mpeg',
+            ''
+        ];
+        
+        for (const type of types) {
+            if (type === '' || MediaRecorder.isTypeSupported(type)) {
+                return type;
+            }
+        }
+        return '';
+    }
+
+    function updateChatDisplay() {
+        chatHistory.innerHTML = '';
+        const startIndex = Math.max(0, dialogHistory.length - 4);
+        for (let i = startIndex; i < dialogHistory.length; i++) {
+            const dialog = dialogHistory[i];
+            const dialogElement = document.createElement('div');
+            dialogElement.innerHTML = `
+                <div class="chat-message user-message">${dialog.user}</div>
+                <div class="chat-message ai-message">${dialog.ai}</div>
+            `;
+            chatHistory.appendChild(dialogElement);
+        }
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    async function requestMicrophoneAccess() {
+        try {
+            const hasPermission = await checkAndRequestPermission();
+            if (!hasPermission) {
+                return;
+            }
+
+            audioStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    channelCount: 1,
+                    sampleRate: 16000,
+                    sampleSize: 16
+                },
+                video: false
+            });
+
+            const mimeType = getSupportedMimeType();
+            const options = {
+                audioBitsPerSecond: 16000
+            };
+            if (mimeType) {
+                options.mimeType = mimeType;
+            }
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                initWebSocket();
+            }
+
+            mediaRecorder = new MediaRecorder(audioStream, {
+                ...options,
+                timeslice: 200
+            });
+            
+            mediaRecorder.ondataavailable = async (event) => {
+                if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(event.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                if (ws) {
+                    ws.send(new Blob([])); // 發送空白Blob表示錄音結束
+                }
+            };
+
+            startRecording();
+            
+        } catch (err) {
+            console.error('Microphone access error:', err);
+            let errorMsg = '無法存取麥克風。';
+            
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                errorMsg = '請允許麥克風存取權限。';
+            } else if (err.name === 'NotFoundError') {
+                errorMsg = '找不到麥克風裝置。';
+            } else if (err.name === 'NotReadableError') {
+                errorMsg = '麥克風可能正被其他應用程式使用。';
+            }
+            
+            showError(errorMsg);
+            recordButton.textContent = '開始對話';
+            recordButton.disabled = false;
+            stopButton.disabled = true;
+        }
+    }
+    
+    function startRecording() {
+        mediaRecorder.start(200);
+        recordButton.textContent = '對話中...';
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+        transcriptionResult.textContent = '';
+        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Recording started');
+    }
+    
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            recordButton.textContent = '開始對話';
+            recordButton.disabled = false;
+            stopButton.disabled = true;
+            console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Recording stopped');
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+        }
+    }
+
+    document.getElementById('voiceSelect').onchange = function() {
+        const configType = parseInt(this.value);
+        fetch('/switch_tts_endpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionid: parseInt(sessionId),
+                config_type: configType
+            })
+        });
+    };
+
+    document.getElementById('avatarSelect').onchange = function() {
+        const avatar_id = this.value;
+        fetch('/switch_avatar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionid: parseInt(sessionId),
+                avatar_id: avatar_id
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0) {
+                currentDisplayName = data.display_name;
+            }
+        })
+        .catch(error => {
+            console.error('Error switching avatar:', error);
+            showError('切換虛擬人失敗');
+        });
+    };
+
+    async function initializeUIWithConfig() {
+        try {
+            const configResponse = await fetch('/get_current_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionid: parseInt(sessionId)
+                })
+            });
+            const configData = await configResponse.json();
+            
+            if (configData.code === 0) {
+                const avatarsResponse = await fetch('/get_avatars');
+                const avatarsData = await avatarsResponse.json();
+                
+                const voicesResponse = await fetch('/get_voices');
+                const voicesData = await voicesResponse.json();
+                
+                if (avatarsData.code === 0 && voicesData.code === 0) {
+                    const avatarSelect = document.getElementById('avatarSelect');
+                    const voiceSelect = document.getElementById('voiceSelect');
+                    
+                    avatarSelect.innerHTML = '';
+                    Object.values(avatarsData.data).forEach(avatar => {
+                        const option = document.createElement('option');
+                        option.value = avatar.id;
+                        option.textContent = avatar.display_name;
+                        avatarSelect.appendChild(option);
+                    });
+                    
+                    voiceSelect.innerHTML = '';
+                    Object.values(voicesData.data).forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        voiceSelect.appendChild(option);
+                    });
+                    
+                    avatarSelect.value = configData.data.current_avatar_id;
+                    voiceSelect.value = configData.data.current_voice_type.toString();
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing UI:', error);
+            showError('初始化設定失敗');
+        }
+    }
+
+    function startPlay() {
+        $('#rtc_media_player').show();
+        
+        if (sdk) {
+            sdk.close();
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+        sdk = new SrsRtcWhipWhepAsync();
+        
+        videoElement.srcObject = sdk.stream;
+
+        videoElement.addEventListener('loadedmetadata', () => {
+            if (!canvas) {
+                initializeGreenScreen(videoElement);
+            }
+        });
+
+        videoElement.addEventListener('playing', () => {
+            if (isGreenScreenEnabled && !animationFrameId) {
+                processFrame();
+            }
+        });
+
+        const host = window.location.hostname;
+        const streamName = sessionId === '0' ? 'livestream' : `livestream${sessionId}`;
+        const url = `https://${host}:1986/rtc/v1/whep/?app=live&stream=${streamName}`;
+        
+        sdk.play(url).then(function(session) {
+            console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` +' WebRTC stream connected successfully');
+        }).catch(function(reason) {
+            sdk.close();
+            $('#rtc_media_player').hide();
+            console.error('WebRTC stream error:', reason);
+            showError('串流連接失敗: ' + reason);
+        });
+    }
+
+    recordButton.onclick = () => {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+            requestMicrophoneAccess();
+        }
+    };
+    
+    stopButton.onclick = stopRecording;
+
+    document.addEventListener('keydown', function(event) {
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        
+        if (event.key.toLowerCase() === 'r') {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                requestMicrophoneAccess();
+            }
+        }
+        
+        if (event.key.toLowerCase() === 't') {
+            stopRecording();
+        }
+
+        if (event.code === 'Space') {
+            event.preventDefault();
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                requestMicrophoneAccess();
+            } else {
+                stopRecording();
+            }
+        }
+    });
+
+    chatHistory.addEventListener('touchstart', function(e) {
+        e.stopPropagation();
+    }, false);
+
+    if (isMac) {
+        switchToEnglishInput();
+        document.addEventListener('compositionstart', () => {
+            document.getElementById('inputMethodNotification').style.display = 'block';
+        });
+        document.addEventListener('compositionend', () => {
+            setTimeout(() => {
+                document.getElementById('inputMethodNotification').style.display = 'none';
+            }, 3000);
+        });
+    }
+
+    window.onbeforeunload = function() {
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        if (sdk) {
+            sdk.close();
+        }
+        if (checkSpeakingInterval) {
+            clearInterval(checkSpeakingInterval);
+        }
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        if (ws) {
+            ws.close();
+        }
+    };
+    
+    $(document).ready(async function() {
+        $('#rtc_media_player').prop('muted', true);
+        initWebSocket();
+        startCheckingSpeakingStatus();
+        await initializeUIWithConfig();
+        startPlay();
+    });
+});
+</script>

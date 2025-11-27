@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>虛擬人對話平台</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: '微軟正黑體', Arial, sans-serif;
+    }
+
+    html, body {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    /* 媒體容器 */
+    .media-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    /* 視頻樣式 - PC版特定設計 */
+    video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: auto;
+        height: 100vh;
+        transform: translate(50%, 10px);
+        object-fit: cover;
+        background-color: #f0f0f0;
+    }
+
+    /* 麥克風按鈕 - 移動版位置 */
+    .mic-button {
+        position: absolute;
+        top: 80%;
+        left: 40%;
+        bottom: 15px;
+        right: 15px;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #9b99ff; /* 藍紫色麥克風按鈕 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        border: none;
+        z-index: 1000;
+    }
+
+    .mic-button:hover {
+        transform: scale(1.05);
+    }
+
+    .mic-button:active {
+        transform: scale(0.95);
+    }
+
+    .mic-button svg {
+        width: 24px;
+        height: 24px;
+        fill: black;
+    }
+
+    .mic-button.recording {
+        background-color: #e74c3c;
+    }
+
+    .mic-text {
+        font-size: 12px;
+        color: black;
+        text-align: center;
+        margin-top: 5px;
+    }
+
+    /* 對話容器 PC版 - 右側聊天區域 */
+    .chat-container {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 50%; /* 調整寬度為50% */
+        height: 100%; /* 高度延展到底部 */
+        background: url('https://storage.googleapis.com/cdp_materials/tenants/local/2/gSMg2KTGUkQAr4hWmLr5TmbZCaNgK9nda9Kn9JXn.png') no-repeat center center;
+        background-size: cover;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* 添加左側空白區域 */
+    .left-space {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 25%;
+        height: 100%;
+        background-color: white; /* 左側白色背景 */
+    }
+
+    /* 訊息樣式 */
+    .message {
+        max-width: 80%;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    .ai-message {
+        align-self: flex-start;
+        background-color: #E3F2FD; /* 藍色 AI 訊息 */
+        color: black;
+        border: 1px solid #000; /* 黑色框線 */
+    }
+
+    .user-message {
+        align-self: flex-end;
+        background-color: #F7F7F7; /* 淺灰色用戶訊息 */
+        color: black;
+        border-radius: 10px;
+        border: 1px solid #000;
+    }
+
+    /* 底部選單容器 */
+    .bottom-nav {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50%; /* 與視頻區域相同寬度 */
+        height: 60px;
+        display: flex;
+        z-index: 100;
+    }
+
+    .select-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: #1E1E1E; /* 深灰色背景 */
+        color: white;
+        font-size: 14px;
+        padding: 5px 10px;
+    }
+
+    .select-dropdown {
+        width: 100%;
+        padding: 5px 10px;
+        background-color: transparent;
+        color: #999;
+        cursor: pointer;
+        border: none;
+        border-radius: 0;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 5px center;
+        background-size: 16px;
+    }
+
+    .select-dropdown:focus {
+        outline: none;
+    }
+
+    .select-dropdown option {
+        background-color: #1E1E1E;
+        color: #999;
+    }
+
+    .select-dropdown:focus {
+        outline: none;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #f8d7da;
+        border-radius: 4px;
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        display: none;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 90%;
+        width: 400px;
+        text-align: center;
+    }
+
+    .modal-buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    /* 響應式設計 - 移動版調整 */
+    @media (max-width: 768px) {
+        /* 手機版視頻調整為全屏 */
+        video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform: none; /* 移除PC版的位移 */
+            top: 0;
+            left: 0;
+            object-fit: cover;
+        }
+        
+        /* 移動版聊天容器改為覆蓋在視頻上 */
+        .chat-container {
+            width: 100%;
+            height: 180px; /* 保持對話框高度 */
+            background: transparent;
+            background-size: cover;
+            padding: 10px 15px;
+            bottom: 60px; /* 直接放在底部選單上 */
+            top: auto;
+            justify-content: flex-start; /* 內容從上到下 */
+            overflow-y: auto;
+        }
+        
+        /* 移動版麥克風按鈕調整位置 - 放置在右側中間偏上的位置 */
+        .mic-button {
+        position: fixed; /* 改回fixed以確保在移動版正確顯示 */
+        top: 40%; /* 調整到中間偏上位置 */
+        bottom: auto;
+        right: 15px;
+        left: auto; /* 移除PC版的left設定 */
+        width: 50px;
+        height: 50px;
+        background-color: #6B68F3; /* 確保顏色一致 */
+    }
+    /* 其他移動版樣式保持不變 */
+    }   
+        .mic-button svg {
+            width: 20px;
+            height: 20px;
+            fill: black;
+        }
+
+        .mic-text {
+            font-size: 10px;
+            color: black;
+        }
+        
+        /* 移動版訊息樣式調整 */
+        .message {
+            max-width: 75%;
+            margin-bottom: 10px;
+            padding: 12px;
+        }
+        
+        .ai-message {
+            align-self: flex-start;
+            background-color: #e3f2fd; /* 藍色 AI 訊息，與PC版一致 */
+            color: black;
+            border: 1px solid #000; /* 黑色框線，與PC版一致 */
+            border-radius: 10px;
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            background-color: #F7F7F7; /* 淺灰色用戶訊息，與PC版一致 */
+            color: black;
+            border-radius: 10px;
+            border: 1px solid #000;
+        }
+        
+        /* 移動版底部選單調整 - 確保置底 */
+        .bottom-nav {
+            width: 100%;
+            height: 60px;
+            position: fixed;  /* 使用fixed確保置底 */
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        
+        /* 添加偽元素填充底部選單上方的留白 */
+        .bottom-nav:before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            height: 20px;  /* 高度調整為覆蓋紅框區域 */
+            background: url('https://storage.googleapis.com/cdp_materials/tenants/local/2/gSMg2KTGUkQAr4hWmLr5TmbZCaNgK9nda9Kn9JXn.png') no-repeat center bottom;
+            background-size: cover;
+        }
+        
+        .select-container {
+            font-size: 14px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .select-dropdown {
+            padding: 5px;
+            font-size: 14px;
+        }
+    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="media-container">
+            <div class="error-message" id="errorMessage"></div>
+            <video id="rtc_media_player" autoplay muted playsinline></video>
+            
+            <!-- 統一的聊天容器，同時處理PC和移動版 -->
+            <div class="chat-container" id="chatContainer">
+                <!-- 聊天消息將在這裡顯示 -->
+            </div>
+            
+            <button class="mic-button" id="micButton">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path>
+                </svg>
+                <span class="mic-text">開始對話</span>
+            </button>
+            
+            <!-- 底部功能欄 -->
+
+            <!--<div class="bottom-nav">
+                <div class="select-container">
+                    <div>主播類型</div>
+                    <select id="avatarSelect" class="select-dropdown">
+                    </select>
+                </div>
+                <div class="select-container">
+                    <div>聲音類型</div>
+                    <select id="voiceSelect" class="select-dropdown">
+                    </select>
+                </div>
+            </div>-->
+            
+        </div>
+    </div>
+
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <h2>麥克風權限請求</h2>
+            <p>此應用程式需要使用您的麥克風進行錄音。您是否同意授予麥克風使用權？</p>
+            <div class="modal-buttons">
+                <button id="allowButton">允許</button>
+                <button id="denyButton">拒絕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="srs.sdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <script>
+    $(function(){
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioStream = null;
+        let dialogHistory = [];
+        let checkSpeakingInterval;
+        let currentDisplayName = '';
+        let isRecording = false;
+        let isMobile = window.innerWidth <= 768;
+        let maxDisplayedMessages = 2; // 移動版顯示的問答組數量
+        
+        const chatContainer = document.getElementById('chatContainer');
+        const micButton = document.getElementById('micButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const permissionModal = document.getElementById('permissionModal');
+        const allowButton = document.getElementById('allowButton');
+        const denyButton = document.getElementById('denyButton');
+        
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('sessionId') || '0';
+        
+        // 檢測視窗大小變化，更新isMobile狀態
+        window.addEventListener('resize', function() {
+            const newIsMobile = window.innerWidth <= 768;
+            if (isMobile !== newIsMobile) {
+                isMobile = newIsMobile;
+                // 視窗大小改變時，重新渲染對話
+                updateMessageDisplay();
+            }
+        });
+        
+        // 顯示錯誤訊息
+        function showError(message) {
+            if (errorMessage) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
+            } else {
+                console.error('錯誤:', message);
+            }
+        }
+
+        // 展示權限對話框
+        function showPermissionModal() {
+            return new Promise((resolve, reject) => {
+                permissionModal.style.display = 'block';
+                
+                allowButton.onclick = async () => {
+                    permissionModal.style.display = 'none';
+                    resolve(true);
+                };
+                
+                denyButton.onclick = () => {
+                    permissionModal.style.display = 'none';
+                    resolve(false);
+                };
+            });
+        }
+
+        // 檢查並請求麥克風權限
+        async function checkAndRequestPermission() {
+            try {
+                const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                
+                if (permissionStatus.state === 'granted') {
+                    return true;
+                } else if (permissionStatus.state === 'prompt') {
+                    const userAgreed = await showPermissionModal();
+                    if (!userAgreed) {
+                        showError('對話功能需要麥克風權限才能使用。');
+                        return false;
+                    }
+                    return true;
+                } else if (permissionStatus.state === 'denied') {
+                    showError('麥克風權限已被封鎖。請在瀏覽器設定中更改權限設定。');
+                    return false;
+                }
+            } catch (err) {
+                const userAgreed = await showPermissionModal();
+                return userAgreed;
+            }
+        }
+        
+        // 請求麥克風存取權限
+        async function requestMicrophoneAccess() {
+            try {
+                const hasPermission = await checkAndRequestPermission();
+                if (!hasPermission) {
+                    return;
+                }
+
+                audioStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        sampleSize: 16
+                    },
+                    video: false
+                });
+                
+                function getSupportedMimeType() {
+                    const types = [
+                        'audio/webm;codecs=opus',
+                        'audio/mp4',
+                        'audio/mpeg',
+                        ''
+                    ];
+                    
+                    for (const type of types) {
+                        if (type === '' || MediaRecorder.isTypeSupported(type)) {
+                            return type;
+                        }
+                    }
+                    return '';
+                }
+
+                const mimeType = getSupportedMimeType();
+                const options = {
+                    audioBitsPerSecond: 16000
+                };
+                if (mimeType) {
+                    options.mimeType = mimeType;
+                }
+                mediaRecorder = new MediaRecorder(audioStream, options);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await transcribeAudio(audioBlob);
+                    audioChunks = [];
+                };
+
+                startRecording();
+                
+            } catch (err) {
+                console.error('Microphone access error:', err);
+                let errorMsg = '無法存取麥克風。';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMsg = '請允許麥克風存取權限。';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = '找不到麥克風裝置。';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '麥克風可能正被其他應用程式使用。';
+                }
+                
+                showError(errorMsg);
+                micButton.classList.remove('recording');
+                micButton.querySelector('.mic-text').textContent = '開始對話';
+                isRecording = false;
+            }
+        }
+        
+        // 開始錄音
+        function startRecording() {
+            audioChunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+            micButton.classList.add('recording');
+            micButton.querySelector('.mic-text').textContent = '結束對話';
+        }
+        
+        // 停止錄音
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                    audioStream = null;
+                }
+            }
+            
+            isRecording = false;
+            micButton.classList.remove('recording');
+            micButton.querySelector('.mic-text').textContent = '開始對話';
+        }
+        
+        // 更新訊息顯示，根據裝置類型處理訊息
+        function updateMessageDisplay() {
+            // 清空聊天容器
+            chatContainer.innerHTML = '';
+            
+            if (isMobile) {
+                // 移動版只顯示最近的幾組對話
+                const startIndex = Math.max(0, dialogHistory.length - maxDisplayedMessages);
+                for (let i = startIndex; i < dialogHistory.length; i++) {
+                    const dialog = dialogHistory[i];
+                    
+                    // 添加用戶訊息
+                    const userMessageElement = document.createElement('div');
+                    userMessageElement.className = 'message user-message';
+                    userMessageElement.textContent = dialog.user;
+                    chatContainer.appendChild(userMessageElement);
+                    
+                    // 添加AI回應
+                    const aiMessageElement = document.createElement('div');
+                    aiMessageElement.className = 'message ai-message';
+                    aiMessageElement.textContent = dialog.ai;
+                    chatContainer.appendChild(aiMessageElement);
+                }
+            } else {
+                // PC版顯示所有對話
+                for (let i = 0; i < dialogHistory.length; i++) {
+                    const dialog = dialogHistory[i];
+                    
+                    // 添加用戶訊息
+                    const userMessageElement = document.createElement('div');
+                    userMessageElement.className = 'message user-message';
+                    userMessageElement.textContent = dialog.user;
+                    chatContainer.appendChild(userMessageElement);
+                    
+                    // 添加AI回應
+                    const aiMessageElement = document.createElement('div');
+                    aiMessageElement.className = 'message ai-message';
+                    aiMessageElement.textContent = dialog.ai;
+                    chatContainer.appendChild(aiMessageElement);
+                }
+            }
+            
+            // 滾動到底部
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 添加對話紀錄
+        function addDialog(userMessage, aiMessage) {
+            const dialogSet = {
+                user: userMessage,
+                ai: aiMessage
+            };
+            dialogHistory.push(dialogSet);
+            
+            // 更新訊息顯示
+            updateMessageDisplay();
+        }
+        
+        // 發送訊息到後端
+        async function humantalk(message) {
+            $('#rtc_media_player').prop('muted', false);
+            console.log('Sending: ' + message);
+            
+            try {
+                await fetch('/human', {
+                    body: JSON.stringify({
+                        text: message,
+                        type: 'echo',
+                        sessionid: parseInt(sessionId)
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    method: 'POST'
+                });
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showError('發送訊息失敗');
+            }
+        }
+
+        // 轉錄音頻並發送到後端
+        async function transcribeAudio(audioBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.wav');
+                formData.append('sessionid', sessionId);
+
+                const response = await fetch('https://talk-dev.aitago.tw:9880/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('轉錄請求失敗');
+                }
+
+                const result = await response.json();
+                
+
+                // 將轉錄結果發送到後端
+                humantalk(result.text);
+
+                // 將用戶訊息和AI回應添加到對話紀錄
+                addDialog(result.input_text, result.text);
+                
+                
+                
+            } catch (error) {
+                console.error('處理錯誤:', error);
+                showError('處理失敗: ' + error.message);
+            }
+        }
+        
+        // 監聽麥克風按鈕點擊事件
+        micButton.addEventListener('click', function() {
+            if (!isRecording) {
+                requestMicrophoneAccess();
+            } else {
+                stopRecording();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            if (event.code === 'Space') {
+                event.preventDefault();
+                if (!isRecording) {
+                    requestMicrophoneAccess();
+                } else {
+                    stopRecording();
+                }
+            }
+        });
+        
+        function startCheckingSpeakingStatus() {
+            checkSpeakingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/is_speaking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sessionid: parseInt(sessionId)
+                        })
+                    });
+                    const result = await response.json();
+                    
+                    const avatarSelect = document.getElementById('avatarSelect');
+                    const voiceSelect = document.getElementById('voiceSelect');
+                    
+                    if (avatarSelect && voiceSelect) {
+                        avatarSelect.disabled = result.data;
+                        voiceSelect.disabled = result.data;
+                    }
+                    
+                    // 如果AI正在說話，禁用麥克風按鈕
+                    if (result.data) {
+                        micButton.disabled = true;
+                        micButton.style.opacity = "0.6";
+                    } else {
+                        micButton.disabled = false;
+                        micButton.style.opacity = "1";
+                    }
+                } catch (error) {
+                    console.error('Error checking speaking status:', error);
+                }
+            }, 500);
+        }
+        
+        var sdk = null;
+
+        // 初始化視頻播放器
+        function startPlay() {
+            $('#rtc_media_player').show();
+            
+            if (sdk) {
+                sdk.close();
+            }
+            sdk = new SrsRtcWhipWhepAsync();
+            
+            $('#rtc_media_player').prop('srcObject', sdk.stream);
+
+            var host = window.location.hostname;
+            var streamName = sessionId === '0' ? 'livestream' : `livestream${sessionId}`;
+            var url = `https://${host}:1986/rtc/v1/whep/?app=live&stream=${streamName}`;
+            
+            sdk.play(url).then(function(session) {
+                console.log('WebRTC stream connected successfully');
+            }).catch(function(reason) {
+                sdk.close();
+                $('#rtc_media_player').hide();
+                console.error('WebRTC stream error:', reason);
+                showError('串流連接失敗: ' + reason);
+            });
+        }
+        
+        // 初始化選擇器內容
+        async function initializeSelectors() {
+            try {
+                // 獲取當前配置
+                const configResponse = await fetch('/get_current_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId)
+                    })
+                });
+                const configData = await configResponse.json();
+                
+                if (configData.code === 0) {
+                    // 獲取所有可用的虛擬人列表
+                    const avatarsResponse = await fetch('/get_avatars');
+                    const avatarsData = await avatarsResponse.json();
+                    
+                    // 獲取所有可用的聲音列表
+                    const voicesResponse = await fetch('/get_voices');
+                    const voicesData = await voicesResponse.json();
+                    
+                    if (avatarsData.code === 0 && voicesData.code === 0) {
+                        const avatarSelect = document.getElementById('avatarSelect');
+                        const voiceSelect = document.getElementById('voiceSelect');
+                        
+                        // 清空並重新填充主播選擇器
+                        avatarSelect.innerHTML = '';
+                        Object.values(avatarsData.data).forEach(avatar => {
+                            const option = document.createElement('option');
+                            option.value = avatar.id;
+                            option.textContent = avatar.display_name;
+                            avatarSelect.appendChild(option);
+                        });
+                        
+                        // 清空並重新填充聲音選擇器
+                        voiceSelect.innerHTML = '';
+                        Object.values(voicesData.data).forEach(voice => {
+                            const option = document.createElement('option');
+                            option.value = voice.id;
+                            option.textContent = voice.name;
+                            voiceSelect.appendChild(option);
+                        });
+                        
+                        // 設置當前選中的值
+                        avatarSelect.value = configData.data.current_avatar_id;
+                        voiceSelect.value = configData.data.current_voice_type.toString();
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing selectors:', error);
+                // showError('初始化設定失敗');
+            }
+        }
+        
+        // 切換虛擬人
+        function switchAvatar(avatarId) {
+            console.log('Switching avatar to:', avatarId);
+            try {
+                fetch('/switch_avatar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId),
+                        avatar_id: avatarId
+                    })
+                });
+            } catch (error) {
+                console.error('Error switching avatar:', error);
+                showError('切換虛擬人失敗');
+            }
+        }
+        
+        // 切換語音
+        function switchVoice(voiceId) {
+            console.log('Switching voice to:', voiceId);
+            try {
+                fetch('/switch_tts_endpoint', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId),
+                        config_type: parseInt(voiceId)
+                    })
+                });
+            } catch (error) {
+                console.error('Error switching voice:', error);
+                showError('切換語音失敗');
+            }
+        }
+        
+        // 創建底部選擇器
+        function createBottomSelectors() {
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            // 確保底部選擇器容器存在
+            if (bottomNav) {
+                // 監聽主播選擇器的變更事件
+                document.getElementById('avatarSelect').addEventListener('change', function() {
+                    const avatarId = this.value;
+                    switchAvatar(avatarId);
+                });
+                
+                // 監聽聲音選擇器的變更事件
+                document.getElementById('voiceSelect').addEventListener('change', function() {
+                    const voiceId = this.value;
+                    switchVoice(voiceId);
+                });
+            }
+        }
+        
+        // 啟動應用
+        $(document).ready(async function() {
+            $('#rtc_media_player').prop('muted', true);
+            
+            // 初始化選擇器內容
+            await initializeSelectors();
+            
+            // 設置選擇器事件監聽
+            createBottomSelectors();
+            
+            // 開始檢查AI是否正在說話
+            startCheckingSpeakingStatus();
+            
+            // 啟動視頻播放
+            startPlay();
+            
+            // 添加示例對話（僅測試用）
+            setTimeout(() => {
+                // 添加示例對話
+                // addDialog("您好，/您是做什麼的呢？", "您好！我是一個虛擬助手，可以回答問題、提供資訊和與您聊天。有什麼我可以幫您的嗎？");
+                // addDialog("謝謝觀看", "您好，謝謝您的觀看！如果您有任何問題或需要進一步的協助，隨時可以告訴我。");
+            }, 2000);
+        });
+    });
+    </script>
+</body>
+</html>

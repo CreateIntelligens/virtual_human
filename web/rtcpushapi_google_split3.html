@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC Stream with Audio Recorder - Index TTS</title>
+    <style>
+    select {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+    }
+
+    select:hover {
+        border-color: #007bff;
+    }
+
+    select:disabled {
+        background-color: #f0f0f0;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+    
+    .media-container {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 60px;
+        position: relative;
+    }
+
+    /* .background-layer {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 600px;
+        height: calc(100% - 40px);
+        background: url('https://storage.googleapis.com/cdp_materials/tenants/local/2/gSMg2KTGUkQAr4hWmLr5TmbZCaNgK9nda9Kn9JXn.png') no-repeat center center;
+        background-size: cover;
+        z-index: 1;
+    } */
+    
+    
+    .chat-container {
+        position: absolute;
+        bottom: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 600px;
+        z-index: 10;
+        text-align: center;
+    }
+    
+    .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        position: relative;
+        z-index: 20;
+    }
+    
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    
+    button:hover {
+        background-color: #0056b3;
+    }
+    
+    button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    
+    video {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px 0;
+        z-index: 2;
+        position: relative;
+    }
+
+    #outputCanvas {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px 0;
+        position: absolute;
+        /* top: 20px; */
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        z-index: 3;
+    }
+
+    #rtc_media_player.hidden {
+        opacity: 0;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #f8d7da;
+        border-radius: 4px;
+        display: none;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .modal-buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .chat-history {
+        margin-top: 0;
+        padding: 8px 16px;
+        background: transparent;
+        overflow-y: auto;
+        height: calc(4 * 70px);
+        display: flex;
+        flex-direction: column;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    /* 新的AI回應顯示區塊樣式 */
+    .ai-response-display {
+        display: block;
+        margin: 10px auto;
+        padding: 20px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.7);
+        font-size: 18px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 40px);
+        min-height: 60px;
+        box-sizing: border-box;
+        color: #f0fff0;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chat-message {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 4px 12px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.6);
+        font-size: 16px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 24px);
+        box-sizing: border-box;
+    }
+
+    .user-message {
+        color: #e3f2fd;
+    }
+
+    .ai-message {
+        color: #f0fff0;
+    }
+
+    .chat-history::-webkit-scrollbar {
+        width: 8px;
+        position: absolute;
+        right: 0;
+    }
+
+    .chat-history::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.2);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.4);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.6);
+    }
+
+    .session-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .input-method-notification {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(255, 193, 7, 0.9);
+        color: #000;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 1001;
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .chat-history::-webkit-scrollbar {
+            width: 4px;
+        }
+    }
+
+    /* 打字指示器樣式 - 與AI回應保持相同寬度 */
+    .typing-indicator {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 4px 12px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.6);
+        font-size: 16px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 24px);
+        box-sizing: border-box;
+    }
+    
+    /* 其餘樣式保持不變 */
+    .typing-indicator .dot {
+        height: 8px;
+        width: 8px;
+        margin: 0 3px;
+        background-color: #f0fff0;
+        border-radius: 50%;
+        display: inline-block;
+        animation: typingBounce 1.3s infinite;
+    }
+    
+    .typing-indicator .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typingBounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-5px); }
+    }
+
+    .input-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 600px;
+        display: flex;
+        gap: 10px;
+        z-index: 100;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 8px;
+    }
+
+    #textInput {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    #textInput::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    #sendButton {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    #sendButton:hover {
+        background-color: #0056b3;
+    }
+
+    /* 諮詢按鈕樣式 */
+    .info-button {
+        position: fixed;
+        top: 50px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #007bff;
+        color: white;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 1002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-style: italic;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .info-button:hover {
+        background: #0056b3;
+        transform: scale(1.05);
+    }
+
+    /* 問題彈窗樣式 */
+    .question-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1003;
+    }
+
+    .question-modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .question-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .question-button {
+        padding: 15px;
+        background: #007bff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+        color: white;
+        font-size: 16px;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .question-button:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .question-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 15px;
+        padding: 10px;
+    }
+
+    .modal-close {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #f8f9fa;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #666;
+    }
+
+    .modal-close:hover {
+        background: #e9ecef;
+        color: #333;
+    }
+
+    .modal-title {
+        margin: 0 0 20px 0;
+        padding-right: 40px;
+        font-size: 1.5em;
+        color: #333;
+    }
+
+    /* Index TTS 標識 */
+    .tts-indicator {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,128,0,0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 1001;
+    }
+    </style>
+</head>
+<body>
+
+    <div class="tts-indicator">Index TTS</div>
+    <button class="info-button">i</button>
+    
+    <!-- 問題彈窗 -->
+    <div class="question-modal">
+        <div class="question-modal-content">
+            <button class="modal-close">&times;</button>
+            <h2 class="modal-title">常見問題</h2>
+            <div class="question-grid">
+                <button class="question-button">產品介紹</button>
+                <button class="question-button">公司介紹</button>
+                <button class="question-button">AIGC影片</button>
+                <button class="question-button">智能銷售助手</button>
+                <button class="question-button">MCN聯盟</button>
+                <button class="question-button">LINE CRM</button>
+                <button class="question-button">AI虛擬人</button>
+                <button class="question-button">智能客服</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="input-method-notification" id="inputMethodNotification">
+        請切換至英文輸入法以使用快捷鍵功能 (R: 開始錄音, T: 停止錄音, 空白鍵: 開始/停止錄音)
+    </div>
+    <div class="session-info" id="sessionInfo"></div>
+    <div class="container">
+        <div class="media-container">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="background-layer"></div>
+            <div id="media">
+                <video id="rtc_media_player" autoplay muted playsinline></video>
+                <canvas id="outputCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <select id="avatarSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <select id="voiceSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <button id="quickIntroButton">快速介紹</button>
+                <button id="recordButton">開始對話</button>
+                <button id="stopButton" disabled>停止對話</button>
+                <!-- <button id="toggleGreenScreen">切換綠幕去除</button> -->
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="ai-response-display" id="aiResponseDisplay">請開始對話...</div>
+        </div>
+        <div class="input-container">
+            <input type="text" id="textInput" placeholder="請輸入您的問題...">
+            <button id="sendButton">發送</button>
+        </div>
+    </div>
+
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <h2>麥克風權限請求</h2>
+            <p>此應用程式需要使用您的麥克風進行錄音。您是否同意授予麥克風使用權？</p>
+            <div class="modal-buttons">
+                <button id="allowButton">允許</button>
+                <button id="denyButton">拒絕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="srs.sdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <script>
+        $(function(){
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('sessionId') || '0';
+            document.getElementById('sessionInfo').textContent = `Session ID: ${sessionId}`;
+    
+            let mediaRecorder = null;
+            let audioChunks = [];
+            let audioStream = null;
+            let dialogHistory = [];
+            let checkSpeakingInterval;
+            let currentDisplayName = '';
+            let canvas, ctx;
+            let isGreenScreenEnabled = false;
+            let animationFrameId = null;
+            let isProcessing = false;
+            let sdk = null;
+    
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            
+            const videoElement = document.getElementById('rtc_media_player');
+            const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+            const recordButton = document.getElementById('recordButton');
+            const stopButton = document.getElementById('stopButton');
+            const errorMessage = document.getElementById('errorMessage');
+            const permissionModal = document.getElementById('permissionModal');
+            const allowButton = document.getElementById('allowButton');
+            const denyButton = document.getElementById('denyButton');
+            // const toggleGreenScreen = document.getElementById('toggleGreenScreen');
+    
+            // Input method switching for Mac
+            function switchToEnglishInput() {
+                if (isMac) {
+                    const notification = document.getElementById('inputMethodNotification');
+                    notification.style.display = 'block';
+                    
+                    try {
+                        const script = `
+                            tell application "System Events"
+                                key code 50 using {control down, command down}
+                            end tell
+                        `;
+                        console.log('Attempting to switch input method to English');
+                    } catch (error) {
+                        console.error('Failed to switch input method:', error);
+                    }
+                }
+            }
+    
+async function handleQuickIntro() {
+                    const userText = "你好，介紹一下你自己";
+                    const aiResponse = "嗨～我是創造智能的AI代言人AIKKA！想知道你的 MBTI 是哪一型嗎？還是對我們的 AI 服務好奇？我都可以告訴你～快來跟我聊聊吧!";
+                    
+                    // 分割AI回應為多句話
+                    const sentences = splitTextIntoSentences(aiResponse);
+                    console.log('快速介紹分句結果:', sentences);
+                    
+                    // 獲取AI回應顯示區塊
+                    const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+                    
+                    try {
+                        $('#rtc_media_player').prop('muted', false);
+                        
+                        // 逐句發送並同步顯示文字
+                        await sendSentencesSequentially(sentences, aiResponseDisplay);
+                        
+                        // 所有句子說完後，更新對話歷史
+                        dialogHistory.push({
+                            user: userText,
+                            ai: aiResponse
+                        });
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showError('發送訊息失敗');
+                        aiResponseDisplay.textContent = '發送訊息失敗，請重試';
+                    }
+            }
+
+            // 分割文本為合適長度的句子
+            function splitTextIntoSentences(text, minLength = 8, maxLength = 15) {
+                // 先按標點符號分割
+                const sentences = text.split(/([。！？\.\!\?；;，,])/).filter(s => s.trim() !== '');
+                const result = [];
+                let currentSentence = '';
+                
+                for (let i = 0; i < sentences.length; i++) {
+                    const part = sentences[i];
+                    
+                    // 如果是標點符號，添加到當前句子
+                    if (/[。！？\.\!\?；;，,]/.test(part)) {
+                        currentSentence += part;
+                        
+                        // 如果當前句子長度合適，保存並重置
+                        if (currentSentence.length >= minLength) {
+                            result.push(currentSentence.trim());
+                            currentSentence = '';
+                        }
+                    } else {
+                        // 如果是文字內容
+                        const tempSentence = currentSentence + part;
+                        
+                        // 如果加上這部分後太長，先保存當前句子
+                        if (currentSentence.length > 0 && tempSentence.length > maxLength) {
+                            result.push(currentSentence.trim());
+                            currentSentence = part;
+                        } else {
+                            currentSentence = tempSentence;
+                        }
+                    }
+                }
+                
+                // 處理最後剩餘的句子
+                if (currentSentence.trim() !== '') {
+                    // 如果最後一句太短，嘗試與前一句合併
+                    if (currentSentence.length < minLength && result.length > 0) {
+                        result[result.length - 1] += currentSentence;
+                    } else {
+                        result.push(currentSentence.trim());
+                    }
+                }
+                
+                return result.filter(s => s.length > 0);
+            }
+
+            // 逐句發送並同步顯示的函數
+            async function sendSentencesSequentially(sentences, displayElement) {
+                console.log('開始逐句發送，句子數量:', sentences.length);
+                
+                for (let i = 0; i < sentences.length; i++) {
+                    const sentence = sentences[i];
+                    const isFirstSentence = i === 0;
+                    
+                    console.log(`發送第 ${i + 1} 句: ${sentence}`);
+                    
+                    // 顯示當前句子
+                    displayElement.textContent = sentence;
+                    
+                    try {
+                        // 發送句子到虛擬人
+                        await fetch('/human', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                text: sentence,
+                                type: 'echo',
+                                interrupt: isFirstSentence, // 只有第一句話打斷
+                                sessionid: parseInt(sessionId)
+                            })
+                        });
+                        
+                        // 等待這句話說完
+                        await waitForSentenceToComplete();
+                        
+                    } catch (error) {
+                        console.error(`發送第 ${i + 1} 句時出錯:`, error);
+                        throw error;
+                    }
+                }
+                
+                console.log('所有句子發送完畢');
+            }
+
+            // 等待當前句子說完的函數
+            async function waitForSentenceToComplete() {
+                return new Promise((resolve) => {
+                    let hasStartedSpeaking = false;
+                    let speakingEndTime = null;
+                    const minSilenceTime = 0; // 至少500ms靜音才認為句子結束
+                    
+                    const checkInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch('/is_speaking', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    sessionid: parseInt(sessionId)
+                                })
+                            });
+                            const result = await response.json();
+                            const isCurrentlySpeaking = result.data;
+                            
+                            // 檢測開始說話
+                            if (!hasStartedSpeaking && isCurrentlySpeaking) {
+                                hasStartedSpeaking = true;
+                                speakingEndTime = null;
+                                console.log('句子開始播放');
+                            }
+                            
+                            // 檢測停止說話
+                            if (hasStartedSpeaking && !isCurrentlySpeaking) {
+                                if (speakingEndTime === null) {
+                                    speakingEndTime = Date.now();
+                                    console.log('檢測到說話停止，開始計時');
+                                } else {
+                                    // 檢查靜音持續時間
+                                    const silenceDuration = Date.now() - speakingEndTime;
+                                    if (silenceDuration >= minSilenceTime) {
+                                        console.log(`句子播放完畢，靜音 ${silenceDuration}ms`);
+                                        clearInterval(checkInterval);
+                                        resolve();
+                                    }
+                                }
+                            }
+                            
+                            // 如果又開始說話，重置結束時間
+                            if (hasStartedSpeaking && isCurrentlySpeaking && speakingEndTime !== null) {
+                                speakingEndTime = null;
+                                console.log('又開始說話，重置計時');
+                            }
+                            
+                        } catch (error) {
+                            console.error('檢查說話狀態時出錯:', error);
+                        }
+                    }, 100); // 每100ms檢查一次
+                    
+                    // 設置超時保護
+                    setTimeout(() => {
+                        console.log('等待句子完成超時');
+                        clearInterval(checkInterval);
+                        resolve();
+                    }, 15000); // 15秒超時
+                });
+            }
+
+            if (isMac) {
+                switchToEnglishInput();
+                document.addEventListener('compositionstart', () => {
+                    document.getElementById('inputMethodNotification').style.display = 'block';
+                });
+                document.addEventListener('compositionend', () => {
+                    setTimeout(() => {
+                        document.getElementById('inputMethodNotification').style.display = 'none';
+                    }, 3000);
+                });
+            }
+    
+            function showError(message) {
+                if (errorMessage) {
+                    errorMessage.textContent = message;
+                    errorMessage.style.display = 'block';
+                    setTimeout(() => {
+                        errorMessage.style.display = 'none';
+                    }, 5000);
+                }
+            }
+    
+            function initializeGreenScreen(videoElement) {
+                canvas = document.getElementById('outputCanvas');
+                ctx = canvas.getContext('2d');
+                
+                // canvas.width = videoElement.videoWidth;
+                // canvas.height = videoElement.videoHeight;
+                // 固定寬度為 600px，根據視頻比例計算高度
+                const aspectRatio = videoElement.videoHeight / videoElement.videoWidth;
+                canvas.width = 600;
+                canvas.height = Math.round(600 * aspectRatio);
+
+                if (isGreenScreenEnabled) {
+                    $('#outputCanvas').show();
+                    $('#rtc_media_player').css('opacity', '0');
+                    processFrame();
+                }
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Green screen initialized');
+            }
+    
+            function processFrame() {
+                if (!isGreenScreenEnabled || isProcessing) {
+                    return;
+                }
+    
+                isProcessing = true;
+                
+                if (videoElement.paused || videoElement.ended) {
+                    isProcessing = false;
+                    return;
+                }
+    
+                try {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // ctx.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
+                    // 計算保持長寬比的縮放尺寸
+                    const newWidth = videoElement.videoWidth
+                    const newHeight = videoElement.videoHeight
+                    
+                    // 計算居中位置
+                    const x = (canvas.width - newWidth) / 2;
+                    const y = (canvas.height - newHeight) / 2;
+                    
+                    // 繪製時使用計算出的位置和尺寸
+                    ctx.drawImage(videoElement, 
+                        0, 0, videoElement.videoWidth, videoElement.videoHeight,  // source dimensions
+                        x, 0, newWidth, newHeight  // destination dimensions with centering
+                    );
+
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        if (g > r * 1.5 && g > b * 1.5) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                } catch (error) {
+                    console.error('Error processing frame:', error);
+                }
+                
+                isProcessing = false;
+                
+                if (isGreenScreenEnabled) {
+                    animationFrameId = requestAnimationFrame(processFrame);
+                }
+            }
+    
+            // toggleGreenScreen.onclick = function() {
+            //     isGreenScreenEnabled = !isGreenScreenEnabled;
+    
+            //     if (isGreenScreenEnabled) {
+            //         $('#rtc_media_player').css('opacity', '0');
+            //         $('#outputCanvas').show();
+            //         toggleGreenScreen.style.backgroundColor = '#e74c3c';
+            //         if (!canvas) {
+            //             initializeGreenScreen(videoElement);
+            //         }
+            //         processFrame();
+            //         console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Green screen enabled');
+            //     } else {
+            //         $('#outputCanvas').hide();
+            //         $('#rtc_media_player').css('opacity', '1');
+            //         toggleGreenScreen.style.backgroundColor = '#007bff';
+            //         if (animationFrameId) {
+            //             cancelAnimationFrame(animationFrameId);
+            //             animationFrameId = null;
+            //         }
+            //         console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Green screen disabled');
+            //     }
+            // };
+    
+            function startCheckingSpeakingStatus() {
+                checkSpeakingInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/is_speaking', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                sessionid: parseInt(sessionId)
+                            })
+                        });
+                        const result = await response.json();
+                        
+                        const avatarSelect = document.getElementById('avatarSelect');
+                        const voiceSelect = document.getElementById('voiceSelect');
+                        avatarSelect.disabled = result.data;
+                        voiceSelect.disabled = result.data;
+                        
+                        const quickIntroButton = document.getElementById('quickIntroButton');
+                        if (result.data) {
+                            recordButton.disabled = true;
+                            recordButton.style.opacity = "0.6";
+                            quickIntroButton.disabled = true;
+                            quickIntroButton.style.opacity = "0.6";
+                        } else {
+                            recordButton.disabled = false;
+                            recordButton.style.opacity = "1";
+                            quickIntroButton.disabled = false;
+                            quickIntroButton.style.opacity = "1";
+                        }
+                    } catch (error) {
+                        console.error('Error checking speaking status:', error);
+                    }
+                }, 500);
+            }
+    
+            function showPermissionModal() {
+                return new Promise((resolve, reject) => {
+                    permissionModal.style.display = 'block';
+                    
+                    allowButton.onclick = async () => {
+                        permissionModal.style.display = 'none';
+                        resolve(true);
+                    };
+                    
+                    denyButton.onclick = () => {
+                        permissionModal.style.display = 'none';
+                        resolve(false);
+                    };
+                });
+            }
+    
+            async function checkAndRequestPermission() {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                    
+                    if (permissionStatus.state === 'granted') {
+                        return true;
+                    } else if (permissionStatus.state === 'prompt') {
+                        const userAgreed = await showPermissionModal();
+                        if (!userAgreed) {
+                            showError('對話功能需要麥克風權限才能使用。');
+                            return false;
+                        }
+                        return true;
+                    } else if (permissionStatus.state === 'denied') {
+                        showError('麥克風權限已被封鎖。請在瀏覽器設定中更改權限設定。');
+                        return false;
+                    }
+                } catch (err) {
+                    const userAgreed = await showPermissionModal();
+                    return userAgreed;
+                }
+            }
+    
+            function getSupportedMimeType() {
+                const types = [
+                    'audio/webm;codecs=opus',
+                    'audio/mp4',
+                    'audio/mpeg',
+                    ''
+                ];
+                
+                for (const type of types) {
+                    if (type === '' || MediaRecorder.isTypeSupported(type)) {
+                        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' MediaRecorder supported type: ' + type);
+
+                        return type;
+                    }
+                }
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' No supported MediaRecorder type found.');
+                return '';
+            }
+    
+            async function requestMicrophoneAccess() {
+                try {
+
+                    const hasPermission = await checkAndRequestPermission();
+                    if (!hasPermission) {
+                        return;
+                    }
+    
+                    audioStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            channelCount: 1,
+                            sampleRate: 16000,
+                            sampleSize: 16
+                        },
+                        video: false
+                    });
+    
+                    const mimeType = getSupportedMimeType();
+                    const options = {
+                        audioBitsPerSecond: 16000
+                    };
+                    if (mimeType) {
+                        options.mimeType = mimeType;
+                    }
+                    mediaRecorder = new MediaRecorder(audioStream, options);
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        await transcribeAudio(audioBlob);
+                        audioChunks = [];
+                    };
+    
+                    startRecording();
+                    
+                } catch (err) {
+                    console.error('Microphone access error:', err);
+                    let errorMsg = '無法存取麥克風。';
+                    
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        errorMsg = '請允許麥克風存取權限。';
+                    } else if (err.name === 'NotFoundError') {
+                        errorMsg = '找不到麥克風裝置。';
+                    } else if (err.name === 'NotReadableError') {
+                        errorMsg = '麥克風可能正被其他應用程式使用。';
+                    }
+                    
+                    showError(errorMsg);
+                    recordButton.textContent = '開始對話';
+                    recordButton.disabled = false;
+                    stopButton.disabled = true;
+                }
+            }
+            
+            function startRecording() {
+                audioChunks = [];
+                mediaRecorder.start();
+                recordButton.textContent = '對話中...';
+                recordButton.disabled = true;
+                stopButton.disabled = false;
+                transcriptionResult.textContent = '';
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Recording started');
+            }
+            
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    recordButton.textContent = '開始對話';
+                    recordButton.disabled = false;
+                    stopButton.disabled = true;
+                    console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Recording stopped');
+                    
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    }
+                }
+            }
+    
+            function updateChatDisplay() {
+                // 由於我們現在使用單一顯示區塊，這個函數可以簡化或移除
+                // 保留空函數以避免其他地方的調用錯誤
+                console.log('updateChatDisplay called - using new single display block');
+            }
+    
+            async function humantalk(message) {
+                $('#rtc_media_player').prop('muted', false);
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}`+ ' Sending to /human api : ' + message);
+                
+                try {
+                    await fetch('/human', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: message,
+                            type: 'echo',
+                            sessionid: parseInt(sessionId)
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    showError('發送訊息失敗');
+                }
+            }
+
+            async function humantalk_interrupt(message) {
+                $('#rtc_media_player').prop('muted', false);
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}`+ ' Sending to /human api : ' + message);
+                
+                try {
+                    await fetch('/human', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: message,
+                            interrupt: true,
+                            type: 'echo',
+                            sessionid: parseInt(sessionId)
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    showError('發送訊息失敗');
+                }
+            }
+    
+// 將 AudioBuffer 轉換為 WAV 格式
+function audioBufferToWav(buffer) {
+    const numOfChan = 1;  // 強制使用單聲道
+    const length = buffer.length * 2;  // 16-bit = 2 bytes per sample
+    const bufferOut = new ArrayBuffer(44 + length);
+    const view = new DataView(bufferOut);
+    
+    // WAV Header
+    writeUTFBytes(view, 0, 'RIFF');
+    view.setUint32(4, 44 + length - 8, true);
+    writeUTFBytes(view, 8, 'WAVE');
+    writeUTFBytes(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);           // format chunk length
+    view.setUint16(20, 1, true);            // format type (1 = PCM)
+    view.setUint16(22, 1, true);            // 強制單聲道
+    view.setUint32(24, 16000, true);        // 採樣率固定為 16000Hz
+    view.setUint32(28, 16000 * 2, true);    // byte rate (16000 * 2 bytes per sample)
+    view.setUint16(32, 2, true);            // block align
+    view.setUint16(34, 16, true);           // bits per sample
+    writeUTFBytes(view, 36, 'data');
+    view.setUint32(40, length, true);
+    
+    // 轉換音頻數據為16-bit PCM
+    const channelData = buffer.getChannelData(0);
+    let offset = 44;
+    for (let i = 0; i < channelData.length; i++) {
+        const sample = Math.max(-1, Math.min(1, channelData[i]));
+        const value = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
+        view.setInt16(offset, value, true);
+        offset += 2;
+    }
+    
+    return bufferOut;
+}
+
+function writeUTFBytes(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+async function transcribeAudio(audioBlob) {
+    try {
+        // 將音頻轉換為單聲道 16kHz（Google Speech-to-Text 推薦格式）
+        const audioContext = new AudioContext({
+            sampleRate: 16000
+        });
+        const audioData = await audioBlob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(audioData);
+        
+        // 轉換為單聲道
+        const monoBuffer = audioContext.createBuffer(
+            1,
+            audioBuffer.length,
+            audioBuffer.sampleRate
+        );
+        const monoData = monoBuffer.getChannelData(0);
+        
+        // 如果是立體聲，將聲道混合為單聲道
+        if (audioBuffer.numberOfChannels === 2) {
+            const left = audioBuffer.getChannelData(0);
+            const right = audioBuffer.getChannelData(1);
+            for (let i = 0; i < audioBuffer.length; i++) {
+                monoData[i] = (left[i] + right[i]) / 2;
+            }
+        } else {
+            // 如果已經是單聲道，直接複製
+            const sourceData = audioBuffer.getChannelData(0);
+            monoData.set(sourceData);
+        }
+        
+        // 創建新的 Blob
+        const wavBuffer = await audioBufferToWav(monoBuffer);
+        const processedBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+        
+        // 發送到服務器
+        const formData = new FormData();
+        formData.append('audio', processedBlob, 'audio.wav');
+        formData.append('sessionid', sessionId);
+
+        const response = await fetch('https://talk-dev.aitago.tw:9880/transcribe3', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('轉錄請求失敗');
+        }
+        
+        const result = await response.json();
+        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Google STT result:', result.input_text);
+        console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' ai answer result:', result.text);
+        
+        // 分割AI回應為多句話
+        const sentences = splitTextIntoSentences(result.text);
+        
+        // 獲取AI回應顯示區塊
+        const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+        
+        // 顯示打字指示器
+        aiResponseDisplay.innerHTML = `
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        `;
+        
+        try {
+            // 一次性發送所有句子給虛擬人（利用排隊機制）
+            for (let i = 0; i < sentences.length; i++) {
+                const sentence = sentences[i];
+                const isFirstSentence = i === 0;
+                
+                await fetch('/human', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: sentence,
+                        type: 'echo',
+                        interrupt: isFirstSentence, // 只有第一句話打斷
+                        sessionid: parseInt(sessionId)
+                    })
+                });
+            }
+            
+            // 立即顯示第一句
+            aiResponseDisplay.textContent = sentences[0];
+            
+            // 動態計算每句話的顯示時間
+            let currentSentenceIndex = 0;
+            
+            if (sentences.length > 1) {
+                const switchToNextSentence = () => {
+                    currentSentenceIndex++;
+                    
+                    if (currentSentenceIndex < sentences.length) {
+                        aiResponseDisplay.textContent = sentences[currentSentenceIndex];
+                        
+                        // 計算當前句子的顯示時間（字數 * 0.18 + 1.2秒）
+                        const currentSentenceLength = sentences[currentSentenceIndex].length;
+                        const displayTime = (currentSentenceLength * 0.18 + 1.2) * 1000; // 轉換為毫秒
+                        
+                        // 設定下一句的切換時間
+                        if (currentSentenceIndex < sentences.length - 1) {
+                            setTimeout(switchToNextSentence, displayTime);
+                        }
+                    }
+                };
+                
+                // 計算第一句的顯示時間
+                const firstSentenceLength = sentences[0].length;
+                const firstDisplayTime = (firstSentenceLength * 0.18 + 1.2) * 1000;
+                
+                // 設定第一句結束後切換到第二句
+                setTimeout(switchToNextSentence, firstDisplayTime);
+            }
+            
+            // 保存完整對話歷史
+            const dialogSet = {
+                user: result.input_text,
+                ai: result.text
+            };
+            dialogHistory.push(dialogSet);
+            
+        } catch (error) {
+            console.error('Error in transcribeAudio:', error);
+            aiResponseDisplay.textContent = '處理失敗，請重試';
+        }
+
+    } catch (error) {
+        console.error('處理錯誤:', error);
+        showError('處理失敗: ' + error.message);
+        const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+        if (aiResponseDisplay) {
+            aiResponseDisplay.textContent = '處理失敗，請重試';
+        }
+    }
+}
+    
+            function startPlay() {
+                $('#rtc_media_player').show();
+                
+                if (sdk) {
+                    sdk.close();
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                }
+                sdk = new SrsRtcWhipWhepAsync();
+                
+                videoElement.srcObject = sdk.stream;
+    
+                videoElement.addEventListener('loadedmetadata', () => {
+                    if (!canvas) {
+                        initializeGreenScreen(videoElement);
+                    }
+                });
+    
+                videoElement.addEventListener('playing', () => {
+                    if (isGreenScreenEnabled && !animationFrameId) {
+                        processFrame();
+                    }
+                });
+    
+                const host = window.location.hostname;
+                const streamName = sessionId === '0' ? 'livestream' : `livestream${sessionId}`;
+                const url = `https://${host}:1986/rtc/v1/whep/?app=live&stream=${streamName}`;
+                
+                sdk.play(url).then(function(session) {
+                    console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` +' WebRTC stream connected successfully');
+                }).catch(function(reason) {
+                    sdk.close();
+                    $('#rtc_media_player').hide();
+                    console.error('WebRTC stream error:', reason);
+                    showError('串流連接失敗: ' + reason);
+                });
+            }
+    
+            // 綁定快速介紹按鈕事件
+            document.getElementById('quickIntroButton').onclick = handleQuickIntro;
+
+            recordButton.onclick = () => {
+                if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                    requestMicrophoneAccess();
+                    
+                }
+            };
+            
+            stopButton.onclick = stopRecording;
+    
+            document.addEventListener('keydown', function(event) {
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+                
+                if (event.key.toLowerCase() === 'r') {
+                    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                        requestMicrophoneAccess();
+                    }
+                }
+                
+                if (event.key.toLowerCase() === 't') {
+                    stopRecording();
+                }
+    
+                if (event.code === 'Space') {
+                    event.preventDefault();
+                    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                        requestMicrophoneAccess();
+                    } else {
+                        stopRecording();
+                    }
+                }
+            });
+    
+            // 移除舊的touch事件處理器，因為我們不再使用chatHistory
+            // chatHistory.addEventListener('touchstart', function(e) {
+            //     e.stopPropagation();
+            // }, false);
+    
+            // IndexTTS 語音切換事件處理器
+            document.getElementById('voiceSelect').onchange = function() {
+                const voiceId = this.value;
+                fetch('/switch_index_voice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId),
+                        voice_id: voiceId
+                    })
+                });
+                console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' MiniMax voice changed to ' + voiceId);
+            };
+    
+            document.getElementById('avatarSelect').onchange = function() {
+                const avatar_id = this.value;
+                fetch('/switch_avatar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionid: parseInt(sessionId),
+                        avatar_id: avatar_id
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        currentDisplayName = data.display_name;
+                    }
+                })
+                .then(() => {
+                    console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' Avatar changed to ' + avatar_id);
+                })
+                .catch(error => {
+                    console.error('Error switching avatar:', error);
+                    showError('切換虛擬人失敗');
+                });
+            };
+    
+            // MiniMax 初始化 UI 配置
+            async function initializeUIWithConfig() {
+                try {
+                    const configResponse = await fetch('/get_current_config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sessionid: parseInt(sessionId)
+                        })
+                    });
+                    const configData = await configResponse.json();
+                    
+                    if (configData.code === 0) {
+                        const avatarsResponse = await fetch('/get_avatars');
+                        const avatarsData = await avatarsResponse.json();
+                        const voicesResponse = await fetch('/get_index_voices');
+                        const voicesData = await voicesResponse.json();
+                        
+                        if (avatarsData.code === 0 && voicesData.code === 0) {
+                            const avatarSelect = document.getElementById('avatarSelect');
+                            const voiceSelect = document.getElementById('voiceSelect');
+                            
+                            avatarSelect.innerHTML = '';
+                            Object.values(avatarsData.data).forEach(avatar => {
+                                const option = document.createElement('option');
+                                option.value = avatar.id;
+                                option.textContent = avatar.display_name;
+                                avatarSelect.appendChild(option);
+                            });
+                            
+                            voiceSelect.innerHTML = '';
+                            Object.values(voicesData.data).forEach(voice => {
+                                const option = document.createElement('option');
+                                option.value = voice.voice_id;
+                                option.textContent = voice.name;
+                                voiceSelect.appendChild(option);
+                            });
+                            
+                            avatarSelect.value = configData.data.current_avatar_id;
+                            
+                            // 設置當前實際使用的 MiniMax 語音 ID
+                            const currentVoiceId = configData.data.current_minimax_voice_id || "Hayley";
+                            voiceSelect.value = currentVoiceId;
+                            
+                            console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ` Set voice selector to current voice: ${currentVoiceId}`);
+                        }
+                    }
+                    console.log(`${new Date().toISOString()}.${(performance.now() % 1000).toFixed(3).padStart(3, '0')}` + ' MiniMax UI initialized with current voice state');
+                } catch (error) {
+                    console.error('Error initializing IndexTTS UI:', error);
+                    showError('初始化 IndexTTS 設定失敗');
+                }
+            }
+    
+            window.onbeforeunload = function() {
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                }
+                if (sdk) {
+                    sdk.close();
+                }
+                if (checkSpeakingInterval) {
+                    clearInterval(checkSpeakingInterval);
+                }
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            };
+            
+            // 處理文字輸入提交的函數
+            async function handleTextSubmit() {
+                const textInput = document.getElementById('textInput');
+                const sendButton = document.getElementById('sendButton');
+                const inputText = textInput.value.trim();
+                
+                if (!inputText) return;
+                
+                // 保存輸入內容以便錯誤時恢復
+                const originalText = inputText;
+                
+                // 立即清空輸入框並禁用按鈕
+                textInput.value = '';
+                sendButton.disabled = true;
+                
+                // 獲取AI回應顯示區塊
+                const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+                
+                try {
+                    const response = await fetch('https://talk-dev.aitago.tw:9880/ai_chat_aicreate360', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: inputText
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('AI回應請求失敗');
+                    }
+
+                    const result = await response.json();
+                    
+                    // 分割AI回應為多句話
+                    const sentences = splitTextIntoSentences(result.text);
+                    
+                    // 顯示打字指示器
+                    aiResponseDisplay.innerHTML = `
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    `;
+                    
+                    // 逐句發送並同步顯示文字
+                    await sendSentencesSequentially(sentences, aiResponseDisplay);
+                    
+                    // 所有句子說完後，更新對話歷史
+                    dialogHistory.push({
+                        user: inputText,
+                        ai: result.text
+                    });
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    // 發生錯誤時恢復輸入內容
+                    textInput.value = originalText;
+                    aiResponseDisplay.textContent = '發送訊息失敗，請重試';
+                    showError('發送訊息失敗: ' + error.message);
+                } finally {
+                    // 無論成功或失敗都重新啟用按鈕
+                    sendButton.disabled = false;
+                }
+            }
+
+            // 綁定發送按鈕事件
+            document.getElementById('sendButton').onclick = handleTextSubmit;
+
+            // 綁定輸入框的 Enter 鍵事件
+            document.getElementById('textInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleTextSubmit();
+                }
+            });
+
+            // 問題列表
+            const questions = {
+                '產品介紹': '我們的服務可以分成「AIGC影片」、「智能銷售助手」、「AI虛擬人」、「Line CRM」以及「MCN聯盟」幾種，你對哪個內容感興趣呢？讓我來跟你進一步說明吧',
+                '公司介紹': '創造智能科技股份有限公司是一家新創的Martech行銷科技公司，運用 AI 搭配銷售漏斗，提供 OMO、自動化、內容行銷的一條龍服務！對我們的內容感興趣吧，歡迎和我們聯繫',
+                'AIGC影片': '運用 AI技術，6-10 天即可完成高品質影音內容，僅需傳統製作 40到60% 的預算、2-3 人即可執行。無論是廣告、社群短影音、教學內容或品牌形象影片，皆可靈活應用，幫助品牌快速掌握影音行銷主導權，放大影響力。',
+                '智能銷售助手': '快速建立知識庫，支援多語言與語氣設定，有效降低人力成本。整合語音辨識與 Lip Sync 技術，打造自然互動體驗，全面升級客服效率與品牌服務品質。',
+                'MCN聯盟': '創造智能是媒體界最具影響力的 MCN，掌握超過 300 個頻道與粉專（YT、FB、IG、Threads 等），累積超過 5,300 萬粉絲，每年帶來超過 60 億次觀看。我們提供流量串聯、品牌曝光、商業媒合、商品導購幫助您提高收益。',
+                'LINE CRM': '整合LINE平台行銷與顧客關係管理，內建多元素材庫、優惠碼功能與短連結產生器，輕鬆進行分眾推播與自動化行銷，提升互動效率與轉換率。',
+                'AI虛擬人': 'AI虛擬人，只要一張照片或短影片，即可生成不同風格的專屬形象，整合語音識別與互動畫面設計，靈活應對多元場景，成為品牌專屬的智慧分身，全面強化形象力與互動體驗。',
+                '智能客服': '快速建立知識庫，支援多語言與語氣設定，全天候在線，有效降低人力成本。整合語音辨識與 Lip Sync 技術，打造自然互動體驗，全面升級客服效率與品牌服務品質。'
+            };
+
+            // 處理預設問題的函數
+            async function handlePresetQuestion(questionText, button) {
+                button.disabled = true;
+                document.querySelector('.question-modal').style.display = 'none';
+                
+                const userText = button.textContent;
+                const aiResponse = questionText;
+                
+                // 分割AI回應為多句話
+                const sentences = splitTextIntoSentences(aiResponse);
+                
+                // 獲取AI回應顯示區塊
+                const aiResponseDisplay = document.getElementById('aiResponseDisplay');
+                
+                try {
+                    $('#rtc_media_player').prop('muted', false);
+                    
+                    // 顯示打字指示器
+                    aiResponseDisplay.innerHTML = `
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    `;
+                    
+                    // 逐句發送並同步顯示文字
+                    await sendSentencesSequentially(sentences, aiResponseDisplay);
+                    
+                    // 所有句子說完後，更新對話歷史
+                    dialogHistory.push({
+                        user: userText,
+                        ai: aiResponse
+                    });
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    aiResponseDisplay.textContent = '發送訊息失敗，請重試';
+                    showError('發送訊息失敗');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            // 綁定問題按鈕事件
+            document.querySelectorAll('.question-button').forEach(button => {
+                button.onclick = () => {
+                    const question = questions[button.textContent];
+                    if (question) {
+                        handlePresetQuestion(question, button);
+                    }
+                };
+            });
+
+            // 綁定諮詢按鈕事件
+            document.querySelector('.info-button').onclick = () => {
+                document.querySelector('.question-modal').style.display = 'block';
+            };
+
+            // 綁定關閉按鈕事件
+            document.querySelector('.modal-close').onclick = () => {
+                document.querySelector('.question-modal').style.display = 'none';
+            };
+
+            // 點擊彈窗外部關閉
+            document.querySelector('.question-modal').onclick = (e) => {
+                if (e.target === document.querySelector('.question-modal')) {
+                    document.querySelector('.question-modal').style.display = 'none';
+                }
+            };
+
+            $(document).ready(async function() {
+                $('#rtc_media_player').prop('muted', true);
+                startCheckingSpeakingStatus();
+                await initializeUIWithConfig();
+                startPlay();
+            });
+        });
+        </script>
+    </body>
+    </html>

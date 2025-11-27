@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC Stream with Audio Recorder</title>
+    <style>
+    select {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+    }
+
+    select:hover {
+        border-color: #007bff;
+    }
+
+    select:disabled {
+        background-color: #f0f0f0;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+    
+    .media-container {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 60px;
+        position: relative;
+    }
+    
+    .chat-container {
+        position: absolute;
+        bottom: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 600px;
+        z-index: 10;
+        text-align: center;
+    }
+    
+    .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        position: relative;
+        z-index: 20;
+    }
+    
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    
+    button:hover {
+        background-color: #0056b3;
+    }
+    
+    button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    
+    video {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px 0;
+        z-index: 2;
+        position: relative;
+    }
+
+    #outputCanvas {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px 0;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        z-index: 3;
+    }
+
+    #rtc_media_player.hidden {
+        opacity: 0;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #f8d7da;
+        border-radius: 4px;
+        display: none;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .modal-buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .chat-history {
+        margin-top: 0;
+        padding: 8px 16px;
+        background: transparent;
+        overflow-y: auto;
+        height: calc(4 * 70px);
+        display: flex;
+        flex-direction: column;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    .chat-message {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 4px 12px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.6);
+        font-size: 16px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 24px);
+        box-sizing: border-box;
+    }
+
+    .user-message {
+        color: #e3f2fd;
+    }
+
+    .ai-message {
+        color: #f0fff0;
+    }
+
+    .chat-history::-webkit-scrollbar {
+        width: 8px;
+        position: absolute;
+        right: 0;
+    }
+
+    .chat-history::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.2);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.4);
+        border-radius: 8px;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.6);
+    }
+
+    .session-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .input-method-notification {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(255, 193, 7, 0.9);
+        color: #000;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 1001;
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .chat-history::-webkit-scrollbar {
+            width: 4px;
+        }
+    }
+
+    .typing-indicator {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 4px 12px;
+        border-radius: 15px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background-color: rgba(0,0,0,0.6);
+        font-size: 16px;
+        word-break: break-word;
+        text-align: center;
+        width: calc(100% - 24px);
+        box-sizing: border-box;
+    }
+    
+    .typing-indicator .dot {
+        height: 8px;
+        width: 8px;
+        margin: 0 3px;
+        background-color: #f0fff0;
+        border-radius: 50%;
+        display: inline-block;
+        animation: typingBounce 1.3s infinite;
+    }
+    
+    .typing-indicator .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typingBounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-5px); }
+    }
+    </style>
+</head>
+<body>
+    <div class="input-method-notification" id="inputMethodNotification">
+        請切換至英文輸入法以使用快捷鍵功能 (R: 開始錄音, T: 停止錄音, 空白鍵: 開始/停止錄音)
+    </div>
+    <div class="session-info" id="sessionInfo"></div>
+
+    <input type="hidden" id="sessionid" value="0">
+    
+    <div class="container">
+        <div class="media-container">
+            <div class="error-message" id="errorMessage"></div>
+            <div id="media">
+                <video id="rtc_media_player" autoplay muted playsinline></video>
+                <canvas id="outputCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <select id="avatarSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <select id="voiceSelect" style="padding: 8px; margin-right: 10px;"></select>
+                <button id="recordButton">開始對話</button>
+                <button id="stopButton" disabled>停止對話</button>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-history" id="chatHistory"></div>
+            <div class="transcription" id="transcriptionResult"></div>
+        </div>
+    </div>
+
+    <div id="permissionModal" class="modal">
+        <div class="modal-content">
+            <h2>麥克風權限請求</h2>
+            <p>此應用程式需要使用您的麥克風進行錄音。您是否同意授予麥克風使用權？</p>
+            <div class="modal-buttons">
+                <button id="allowButton">允許</button>
+                <button id="denyButton">拒絕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="srs.sdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="webrtcapi_demo_part2.js"></script>
+</body>
+</html>

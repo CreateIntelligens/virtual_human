@@ -1,0 +1,26 @@
+{
+    "voice_0": {
+        "id": 0,
+        "name": "Hayley",
+        "voice_id": "moss_audio_9e3d9106-42a6-11f0-b6c4-9e15325fe584",
+        "config": {
+            "model": "speech-02-turbo",
+            "speed": 1,
+            "vol": 2,
+            "pitch": 0,
+            "emotion": "happy"
+        }
+    },
+    "voice_1": {
+        "id": 1,
+        "name": "小安",
+        "voice_id": "moss_audio_069e7ef7-45ab-11f0-b24c-2e48b7cbf811",
+        "config": {
+            "model": "speech-02-turbo",
+            "speed": 1,
+            "vol": 1,
+            "pitch": 0,
+            "emotion": "happy"
+        }
+    }
+}

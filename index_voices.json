@@ -1,0 +1,26 @@
+{
+    "voice_0": {
+        "id": 0,
+        "name": "Hayley",
+        "audio_paths": ["/app/assets/voices/hayley/1.WAV"],
+        "seed": 2
+    },
+    "voice_1": {
+        "id": 1,
+        "name": "小安",
+        "audio_paths": ["/app/assets/voices/ann/ann_1.WAV"],
+        "seed": 2
+    },
+    "voice_2": {
+        "id": 2,
+        "name": "小明",
+        "audio_paths": ["/app/assets/voices/xiaoming.mp3"],
+        "seed": 2
+    },
+    "voice_3": {
+        "id": 3,
+        "name": "小習",
+        "audio_paths": ["/app/assets/voices/Jinping.wav"],
+        "seed": 2
+    }
+}

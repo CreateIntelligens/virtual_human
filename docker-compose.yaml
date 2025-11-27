@@ -1,0 +1,87 @@
+services:
+  srs:
+    image: registry.cn-hangzhou.aliyuncs.com/ossrs/srs:5
+    environment:
+      - CANDIDATE=${CANDIDATE}
+    ports:
+      - "1935:1935"
+      - "8080:8080"
+      - "1985:1985"
+      - "8000:8000/udp"
+    command: > 
+      sh -c "apt-get update && 
+             apt-get install -y netcat-openbsd wget &&
+             ./objs/srs -c conf/rtc.conf"
+    restart: always
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 1985 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "10"
+
+  app:
+    build: .
+    env_file: 
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TRANSPORT=${TRANSPORT}
+      - MODEL=${MODEL}
+      - AVATAR_ID=${AVATAR_ID}
+      - TTS=${TTS}
+      - TTS_SERVER=${TTS_SERVER}
+      - MAX_SESSION=${MAX_SESSION}
+      - AVATAR_LIST=${AVATAR_LIST}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_TTS_MODEL=${OPENAI_TTS_MODEL}
+      - OPENAI_VOICE=${OPENAI_VOICE}
+      - PUSH_URL=http://srs:1985/rtc/v1/whip/?app=live&stream=livestream
+      - DEBUG=1
+    ports:
+      - "8010:8010"
+      - "9885:9885"
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - /app/models
+      - /app/gfpgan
+      - /app/ernerf
+      - ./h264.py:/usr/local/lib/python3.10/site-packages/aiortc/codecs/h264.py
+    networks:
+      - app-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      srs:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8010/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    stop_grace_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "10"
+
+networks:
+  app-network:
+    driver: bridge
+
