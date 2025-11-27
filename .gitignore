@@ -53,6 +53,8 @@ logs/
 *.pkl
 *.pt
 *.onnx
+*.rep
+*.pickle
 
 # 模型目录
 models/
